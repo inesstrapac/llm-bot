@@ -1,0 +1,3 @@
+fastapi
+uvicorn
+# ...plus any AI libraries like transformers, torch, etc.
