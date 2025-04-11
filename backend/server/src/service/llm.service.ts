@@ -12,7 +12,7 @@ export class LlmService {
 
   async getPrediction(inputData: any): Promise<any> {
     // Replace 'localhost' and '8000' with your actual Python service URL/port
-    const url = 'http://localhost:8000/predict';
+    const url = 'http://localhost:5000/predict';
 
     // Make POST request to the Python microservice
     const response$ = this.httpService.post(url, { input: inputData });

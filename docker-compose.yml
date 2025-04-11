@@ -1,0 +1,59 @@
+version: "3.8"
+services:
+  backend:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile.server
+    ports:
+      - "8081:8081"
+    depends_on:
+      - ai-service
+      - db
+    environment:
+      - PYTHON_SERVICE_URL=http://ai-service:5000
+      - DATABASE_URL=postgres://user:password@db:5432/db
+    networks:
+      - app-network
+  ai-service:
+    build:
+      context: ./backend/ai
+      dockerfile: Dockerfile.ai-service
+    container_name: ai-service
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend/ai:/app
+    networks:
+      - app-network
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.client
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  db:
+    image: postgres:14
+    container_name: db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
