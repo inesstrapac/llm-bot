@@ -1,3 +1,2 @@
-fastapi
-uvicorn
-# ...plus any AI libraries like transformers, torch, etc.
+fastapi==0.110.0
+uvicorn==0.29.0

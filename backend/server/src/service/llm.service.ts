@@ -1,24 +1,28 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class LlmService {
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {}
 
-  getHello(): string {
-    return 'Hello World!';
+  async getHello() {
+    const url = `${this.configService.get<string>('AI_SERVICE_URL')}/hello`;
+    const response$ = this.httpService.get(url);
+    const result = await lastValueFrom(response$);
+    return result.data;
   }
 
   async getPrediction(inputData: any): Promise<any> {
-    // Replace 'localhost' and '8000' with your actual Python service URL/port
-    const url = 'http://localhost:5000/predict';
+    const url = `${this.configService.get<string>('AI_SERVICE_URL')}/predict`;
 
-    // Make POST request to the Python microservice
     const response$ = this.httpService.post(url, { input: inputData });
-    const response = await lastValueFrom(response$);
+    const result = await lastValueFrom(response$);
 
-    // Return the AI response
-    return response.data;
+    return result.data;
   }
 }

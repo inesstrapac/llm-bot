@@ -5,8 +5,8 @@ import { LlmService } from '../service/llm.service';
 export class LlmController {
   constructor(private readonly llmService: LlmService) {}
 
-  @Get()
-  getHello(): string {
+  @Get('hello')
+  getHello() {
     return this.llmService.getHello();
   }
 

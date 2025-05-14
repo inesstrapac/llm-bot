@@ -8,4 +8,4 @@ import { LlmService } from '../service/llm.service';
   controllers: [LlmController],
   providers: [LlmService],
 })
-export class AppModule {}
+export class LlmModule {}
