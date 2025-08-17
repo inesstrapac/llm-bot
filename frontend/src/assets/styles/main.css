@@ -1,0 +1,13 @@
+@import "@/layouts/authentication/authLayout.css";
+@import "@/layouts/default/defaultLayout.css";
+
+/* global styles */
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+* {
+  box-sizing: border-box;
+}

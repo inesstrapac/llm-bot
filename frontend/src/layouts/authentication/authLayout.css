@@ -1,0 +1,14 @@
+.auth-layout {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #f6f8fb;
+}
+.auth-card {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}

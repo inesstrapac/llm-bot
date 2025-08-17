@@ -1,0 +1,26 @@
+.auth-title {
+  margin: 0 0 12px;
+  text-align: center;
+}
+.auth-tabs {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 8px;
+  margin: 8px 0 16px;
+}
+.auth-tabs button {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+}
+.auth-tabs button.active {
+  background: #111827;
+  color: #fff;
+  border-color: transparent;
+}
+.auth-err {
+  color: #c62828;
+  margin-top: 8px;
+  text-align: center;
+}

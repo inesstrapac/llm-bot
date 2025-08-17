@@ -2,8 +2,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Module } from '@nestjs/common';
 import { UserModule } from './module/user.module';
-import { User } from './entities/user.entity';
+import { AuthModule } from './authorization/auth.module';
 import { LlmModule } from './module/llm.module';
+import { DevBootstrapService } from './seeding/admin.seeder';
 
 @Module({
   imports: [
@@ -18,8 +19,10 @@ import { LlmModule } from './module/llm.module';
       }),
       inject: [ConfigService],
     }),
+    AuthModule,
     UserModule,
     LlmModule,
   ],
+  providers: [DevBootstrapService],
 })
 export class AppModule {}
