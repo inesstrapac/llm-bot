@@ -1,16 +1,84 @@
-.default-layout {
-  min-height: 100vh;
-  display: grid;
-  grid-template-rows: auto 1fr;
-  background: #f6f8fb;
+:root {
+  --nav-h: 56px; /* match your navbar height */
+  --sb-w: 240px; /* desired sidebar width */
+  --gutter: 80px; /* the visible rim around the main card (≈38px). Use 40px if you prefer pixels */
+  --card-radius: 18px;
+  --card-bg: white;
+  --gutter-sb: 150px;
 }
-.app-nav {
-  background: #fff;
-  border-bottom: 1px solid #eee;
-  padding: 12px 16px;
+
+.app-shell {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  background:
+    linear-gradient(180deg, rgba(15, 18, 32, 0.6), rgba(15, 18, 32, 0.6)),
+    url("@/assets/bg.png") center/cover no-repeat;
+
+  background-position:
+    0 0,
+    0 0; /* gradient, image */
+  background-repeat:
+    no-repeat, repeat; /* gradient doesn’t repeat; image tiles */
+  background-size:
+    100% 100%,
+    auto;
 }
+
+.app-body {
+  display: flex;
+  height: calc(100vh - var(--nav-h));
+  overflow: hidden;
+}
+
+/* Page column */
 .app-main {
-  padding: 24px;
-  max-width: 1100px;
-  margin: 0 auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: calc(100% - (2 * var(--gutter)));
+  margin: var(--gutter);
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--card-radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  position: relative;
+
+  transition: width 0.25s ease;
+}
+.app-main :deep(.fill-parent) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Sidebar column */
+.app-aside {
+  flex: 0 0 var(--sb-w);
+  width: var(--sb-w);
+  height: calc(100% - (2 * var(--gutter-sb)));
+  margin-bottom: var(--gutter-sb);
+  margin-top: var(--gutter-sb);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-top-right-radius: var(--card-radius);
+  border-bottom-right-radius: var(--card-radius);
+  background: #0a1020;
+  overflow: hidden;
+  transition:
+    width 0.25s ease,
+    flex-basis 0.25s ease,
+    transform 0.25s ease,
+    opacity 0.2s ease;
+  will-change: width, flex-basis, transform;
+}
+
+.app-aside.is-collapsed {
+  flex-basis: 0;
+  width: 0;
+  transform: translateX(-16px); /* subtle slide to the left */
+  opacity: 0; /* optional fade */
+  pointer-events: none; /* avoid accidental clicks */
 }

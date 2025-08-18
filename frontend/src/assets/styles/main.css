@@ -1,5 +1,6 @@
 @import "@/layouts/authentication/authLayout.css";
 @import "@/layouts/default/defaultLayout.css";
+@import "@/components/base/home/homepage.css";
 
 /* global styles */
 html,
@@ -10,4 +11,13 @@ body,
 }
 * {
   box-sizing: border-box;
+}
+
+.router-links {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #111827;
+  border: 1px solid transparent;
 }

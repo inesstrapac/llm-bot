@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { login, register, logout } from "../api";
+import router from "@/app/router";
 
 export const useAuthStore = defineStore("auth", () => {
   const user = ref(null);
@@ -44,8 +45,10 @@ export const useAuthStore = defineStore("auth", () => {
   async function signOut() {
     try {
       await logout();
-    } catch {
-      console.log("not done yet");
+      router.go("/authentication");
+    } catch (e) {
+      error.value = e?.response?.data?.message || "Logout failed";
+      throw e;
     }
     user.value = null;
     accessToken.value = null;

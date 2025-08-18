@@ -1,0 +1,98 @@
+.homepage-body {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: clamp(12px, 3vw, 24px);
+  padding: clamp(12px, 3vw, 24px);
+  border-radius: inherit;
+  box-sizing: border-box;
+}
+
+.options-hp {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  justify-content: center;
+}
+
+.homepage-title {
+  display: flex;
+  justify-content: center;
+  padding-top: 20%;
+  padding-right: 10%;
+}
+
+.robot-bg {
+  flex: 0 0 clamp(160px, 28vw, 500px);
+  height: 100%;
+  background: url("@/assets/robot.png") center/contain no-repeat;
+  border-top-left-radius: inherit;
+  border-bottom-left-radius: inherit;
+  margin-left: 20%;
+}
+
+.home-links {
+  flex: 1 1 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(10px, 2.2vw, 16px);
+  padding-right: 10%;
+  padding-bottom: 20%;
+}
+
+.home-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: min(400px, 90%);
+  min-height: 52px;
+  padding: 0 28px;
+  text-decoration: none;
+
+  /* look */
+  border-radius: 9999px; /* pill shape */
+  background: linear-gradient(
+    180deg,
+    #b88a5a 0%,
+    #8b5e3c 100%
+  ); /* caramel → cocoa */
+  color: #fff9f0; /* warm cream text */
+  font-weight: 700;
+  letter-spacing: 0.2px;
+
+  /* details */
+  border: 1px solid rgb(150, 119, 70);
+  box-shadow:
+    0 6px 14px #70512240,
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition:
+    transform 0.06s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+/* hover/active/focus states */
+.home-btn:hover {
+  filter: brightness(1.05);
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.home-btn:active {
+  transform: translateY(1px);
+  box-shadow:
+    0 6px 12px rgba(0, 0, 0, 0.28) inset,
+    0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.home-btn:focus-visible {
+  outline: 2px solid #f4e1c6;
+  outline-offset: 3px;
+}
+
+/* optional: highlight the active route */
+.home-btn.router-link-active {
+  background: linear-gradient(180deg, #c9996a 0%, #966740 100%);
+}

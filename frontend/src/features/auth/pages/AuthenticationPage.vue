@@ -12,7 +12,7 @@ const route = useRoute();
 const tab = ref("login");
 
 function goNext() {
-  router.replace(route.query.next || "/chat");
+  router.replace(route.query.next || "/homepage");
 }
 </script>
 
@@ -30,7 +30,7 @@ function goNext() {
     </div>
 
     <LoginForm v-if="tab === 'login'" @success="goNext" />
-    <RegisterForm v-else @success="tab = 'register'" />
+    <RegisterForm v-else @success="tab = 'login'" />
 
     <p v-if="auth.error" class="auth-err">{{ auth.error }}</p>
   </section>
