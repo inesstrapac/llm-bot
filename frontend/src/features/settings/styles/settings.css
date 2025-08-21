@@ -1,0 +1,171 @@
+/* ---------- palette (cute browns) ---------- */
+:root {
+  --c-bg: #f8f3ea; /* page bg hint */
+  --c-surface: #fffaf3; /* card/table surface */
+  --c-line: #eadfce; /* separators */
+  --c-line-soft: #efe6d7;
+  --c-text: #3d2f23; /* main text (warm dark) */
+  --c-muted: #8a7561;
+
+  --c-header: #d5b08b5d;
+  --c-primary: #8b5e34; /* brown */
+  --c-primary-700: #7a502b;
+  --c-primary-800: #6b4424;
+  --c-primary-50: #fbf5ee;
+  --pad: clamp(12px, 3vw, 24px);
+}
+
+/* ---------- page scaffolding ---------- */
+.settings {
+  display: grid;
+  gap: 16px;
+}
+.settings__title {
+  margin: 0 0 8px;
+  color: var(--c-text);
+}
+
+/* ---------- card ---------- */
+.card {
+  background: var(--c-surface);
+  border-radius: 16px;
+  border: 1px solid var(--c-line);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 8px 24px rgba(0, 0, 0, 0.03);
+  padding: 16px;
+}
+.card--flush {
+  padding: 0;
+  overflow: hidden;
+}
+.card--edge {
+  margin: calc(var(--pad) * -1);
+  border-radius: inherit;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- table ---------- */
+.settings-table {
+  width: 100%;
+  height: 100%;
+  border-collapse: collapse; /* fixed grid via <col> */
+  table-layout: fixed;
+  color: var(--c-text);
+}
+
+/* unified cell box model + spacing + centered content */
+.settings-table th,
+.settings-table td {
+  padding: 16px 18px;
+  box-sizing: border-box;
+  vertical-align: middle;
+  text-align: center; /* center everything */
+}
+
+/* header */
+.settings-table thead th {
+  background: var(--c-header);
+  font-weight: 700;
+  border-bottom: 1px solid var(--c-line);
+}
+
+/* subtle full-width row separator */
+.settings-table tbody tr {
+  box-shadow: inset 0 -1px 0 var(--c-line-soft);
+}
+.settings-table tbody tr:last-child {
+  box-shadow: none;
+}
+.settings-table tbody td,
+.settings-table tbody th {
+  border-bottom: 0;
+}
+
+/* light hover on rows */
+.settings-table tbody tr:hover {
+  background: #fffdf8;
+}
+
+/* column widths bound to actual <col> elements */
+.settings-table col.col-name {
+  width: 240px;
+}
+.settings-table col.col-value {
+  width: auto;
+}
+.settings-table col.col-actions {
+  width: 220px;
+}
+
+/* cells */
+.cell-name {
+  font-weight: 700;
+  color: var(--c-text);
+}
+.cell-value {
+  color: var(--c-text);
+  overflow-wrap: anywhere;
+}
+.muted {
+  color: var(--c-muted);
+}
+
+/* Actions cell: perfectly centered buttons */
+.cell-actions {
+  display: flex;
+  justify-content: center; /* center horizontally */
+  align-items: center; /* center vertically */
+  gap: 10px;
+  white-space: nowrap;
+  height: 100%;
+}
+
+/* ---------- buttons (brown & cute) ---------- */
+.btn {
+  appearance: none;
+  border: 1px solid var(--c-primary);
+  background: var(--c-primary);
+  color: #fff;
+  border-radius: 999px; /* pill */
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1;
+  transition:
+    transform 0.06s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    color 0.15s ease;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+.btn:hover {
+  background: var(--c-primary-700);
+  border-color: var(--c-primary-700);
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 3px rgba(139, 94, 52, 0.25);
+}
+
+.btn.btn--ghost {
+  background: #fff;
+  color: var(--c-primary-800);
+  border-color: var(--c-line);
+}
+.btn.btn--ghost:hover {
+  background: var(--c-primary-50);
+  border-color: var(--c-primary);
+  color: var(--c-primary-800);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: saturate(0.8);
+}

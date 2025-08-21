@@ -3,62 +3,151 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { UserService } from 'src/service/user.service';
-import { RegisterDto, User } from 'src/entities/user.entity';
-import { LoginDto } from 'src/entities/user.entity';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { Response } from 'express';
+import { UserService } from 'src/service/user.service';
+import {
+  RegisterDto,
+  User,
+  LoginDto,
+  UpdateUserDto,
+} from 'src/entities/user.entity';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private userService: UserService,
-    private jwt: JwtService,
+    private readonly users: UserService,
+    private readonly jwt: JwtService,
   ) {}
 
-  async register(userRegisterData: RegisterDto) {
-    const userExists = await this.userService.findByEmail(
-      userRegisterData.email,
-    );
-    if (userExists) throw new ConflictException('Email already registered');
-
-    const salt = Number(12);
-    const passwordHash = await bcrypt.hash(userRegisterData.password, salt);
-    userRegisterData.password = passwordHash;
-    const newUser: Partial<User> = { ...userRegisterData, isActive: false };
-
-    const user = await this.userService.create(newUser);
-    return this.strip(user);
-  }
-
-  async login(userLoginData: LoginDto) {
-    const user = await this.userService.findByEmail(userLoginData.email);
-    if (!user) throw new UnauthorizedException('Invalid credentials');
-
-    const passwordsMatch = await bcrypt.compare(
-      userLoginData.password,
-      user.password,
-    );
-    if (!passwordsMatch) throw new UnauthorizedException('Invalid credentials');
-
-    await this.userService.updateUser(user.id, { isActive: true });
-
-    const accessToken = await this.jwt.signAsync({
-      sub: user.id,
+  private signAccessToken(user: User) {
+    const payload = {
+      sub: String(user.id),
       email: user.email,
+      role: user.role,
+    };
+    return this.jwt.signAsync(payload, {
+      secret: 'superlongrandomsecret_change_me',
+      issuer: 'math-bot',
+      audience: 'web',
+      expiresIn: '30m',
     });
-    return { accessToken, user: this.strip(user) };
   }
 
-  async logout(userId: number) {
-    const loggedOut = await this.userService.updateUser(userId, {
-      isActive: false,
+  private signRefreshToken(user: User) {
+    const payload = { sub: String(user.id) };
+    return this.jwt.signAsync(payload, {
+      secret: 'superlongrandomsecret_change_me',
+      issuer: 'math-bot',
+      audience: 'web',
+      expiresIn: '7d',
     });
-    return loggedOut ? 'Successfully logged out' : 'Have not logged out';
+  }
+
+  private setRefreshCookie(res: Response, refreshToken: string) {
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      path: '/auth',
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    });
   }
 
   private strip(user: any) {
     const { password, ...safe } = user;
     return safe;
+  }
+
+  async register(data: RegisterDto) {
+    const existing = await this.users.findByEmail(data.email);
+    if (existing) throw new ConflictException('Email already registered');
+
+    const hashedPassword = await this.passwordHash(data.password);
+    const newUser: Partial<User> = {
+      ...data,
+      password: hashedPassword,
+      isActive: false,
+    };
+
+    const user = await this.users.create(newUser);
+    return this.strip(user);
+  }
+
+  async passwordHash(password: string) {
+    const saltRounds = 12;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+    return passwordHash;
+  }
+
+  async login(dto: LoginDto, res: Response) {
+    const user = await this.users.findByEmail(dto.email);
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+
+    const ok = await bcrypt.compare(dto.password, user.password);
+    if (!ok) throw new UnauthorizedException('Invalid credentials');
+
+    await this.users
+      .updateUser(user.id, { isActive: true })
+      .catch(() => undefined);
+
+    const accessToken = await this.signAccessToken(user);
+    const refreshToken = await this.signRefreshToken(user);
+    this.setRefreshCookie(res, refreshToken);
+
+    const decoded: any = this.jwt.decode(accessToken);
+    const expiresAt = decoded?.exp ? new Date(decoded.exp * 1000) : null;
+    res.setHeader('X-Access-Token', accessToken);
+    if (expiresAt)
+      res.setHeader('X-Access-Token-Expires-At', expiresAt.toISOString());
+
+    return { user: this.strip({ ...user, isActive: true }) };
+  }
+
+  async refresh(req: any, res: Response) {
+    const token = req.cookies?.refresh_token;
+    if (!token) throw new UnauthorizedException('No refresh token');
+
+    // verify refresh token
+    let payload: any;
+    try {
+      payload = await this.jwt.verifyAsync(token, {
+        secret: 'superlongrandomsecret_change_me',
+        issuer: 'math-bot',
+        audience: 'web',
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const user = await this.users.findById(Number(payload.sub));
+    if (!user) throw new UnauthorizedException('User not found');
+
+    // (Optional) rotation: issue a brand-new refresh cookie
+    const newRefresh = await this.signRefreshToken(user);
+    this.setRefreshCookie(res, newRefresh);
+
+    // new access token in headers
+    const accessToken = await this.signAccessToken(user);
+    const decoded: any = this.jwt.decode(accessToken);
+    const expiresAt = decoded?.exp ? new Date(decoded.exp * 1000) : null;
+    res.setHeader('X-Access-Token', accessToken);
+    if (expiresAt)
+      res.setHeader('X-Access-Token-Expires-At', expiresAt.toISOString());
+
+    return { user: this.strip(user) }; // return user if you like
+  }
+
+  async logout(userId: number, res: Response) {
+    await this.updateUser(userId, { isActive: false }).catch(() => undefined);
+    res.clearCookie('refresh_token', { path: '/auth' });
+    return { message: 'Logged out' };
+  }
+
+  async updateUser(userId: number, data: UpdateUserDto) {
+    const updatedUser = await this.users.updateUser(userId, data);
+    updatedUser.password = await this.passwordHash(updatedUser.password);
+    return updatedUser;
   }
 }

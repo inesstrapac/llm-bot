@@ -13,7 +13,7 @@ ENV HOST=0.0.0.0 \
     CHOKIDAR_USEPOLLING=1
 EXPOSE 8082
 # vue-cli already watches & hot-reloads
-CMD ["npm","run","dev","--","--host","0.0.0.0","--port","8082"]
+CMD ["npm","run","serve","--","--host","0.0.0.0","--port","8082"]
 
 # ---------- build target ----------
 FROM base AS build

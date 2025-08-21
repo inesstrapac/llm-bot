@@ -1,4 +1,3 @@
-// src/user/user.controller.ts
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { UserService } from '../service/user.service';
 import { User } from '../entities/user.entity';

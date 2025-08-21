@@ -1,28 +1,53 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { Response, Request } from 'express';
 import { AuthService } from './auth.service';
-import { RegisterDto, User } from 'src/entities/user.entity';
-import { LoginDto } from 'src/entities/user.entity';
 import { AuthGuard } from '@nestjs/passport';
+import { LoginDto, UpdateUserDto } from 'src/entities/user.entity';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
-
-  @Post('register')
-  register(@Body() userRegisterData: RegisterDto): Promise<User> {
-    return this.authService.register(userRegisterData);
-  }
+  constructor(private readonly auth: AuthService) {}
 
   @Post('login')
-  login(@Body() userLoginData: LoginDto) {
-    return this.authService.login(userLoginData);
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.auth.login(dto, res);
+  }
+
+  @Post('refresh')
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.auth.refresh(req, res);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Post('logout')
-  logout(@Req() req: any) {
-    const userId = req.user.id;
-    return this.authService.logout(userId);
+  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
+    return this.auth.logout(Number(req.user.id), res);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('users/:id')
+  updateUser(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: UpdateUserDto,
+  ) {
+    return this.auth.updateUser(id, data);
   }
 
   @UseGuards(AuthGuard('jwt'))

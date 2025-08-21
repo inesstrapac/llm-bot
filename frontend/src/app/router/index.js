@@ -1,14 +1,20 @@
 import { createRouter, createWebHistory } from "vue-router";
+
 import { useAuthStore } from "@/features/auth/store/auth.store";
+
 import DefaultLayout from "@/layouts/default/DefaultLayout.vue";
+
+import AuthenticationPage from "../../features/auth/pages/AuthenticationPage.vue";
 import HomePage from "../../components/base/home/HomePage.vue";
 import ChatPage from "../../features/chat/pages/ChatPage.vue";
+import SettingsPage from "@/features/settings/pages/SettingsPage.vue";
 
 const routes = [
+  { path: "/", redirect: { name: "authentication" } },
   {
     path: "/authentication",
     name: "authentication",
-    component: () => import("../../features/auth/pages/AuthenticationPage.vue"),
+    component: AuthenticationPage,
     meta: { layout: "authentication" },
   },
   {
@@ -16,23 +22,11 @@ const routes = [
     component: DefaultLayout,
     meta: { layout: "default", requiresAuth: true },
     children: [
-      { path: "", redirect: { name: "homepage" } }, // <— default child
       { path: "homepage", name: "homepage", component: HomePage },
       { path: "chat", name: "chat", component: ChatPage },
+      { path: "settings", name: "settings", component: SettingsPage },
     ],
   },
-  /* {
-    path: "/chat",
-    name: "chat",
-    component: () => import("../../features/chat/pages/ChatPage.vue"),
-    meta: { requiresAuth: true, layout: "default" },
-  }, */
-  /* {
-    path: "/homepage",
-    name: "homepage",
-    component: () => import("../../components/base/home/HomePage.vue"),
-    meta: { requiresAuth: true, layout: "default" },
-  }, */
 ];
 
 const router = createRouter({
@@ -42,9 +36,11 @@ const router = createRouter({
 });
 
 router.beforeEach((to) => {
-  if (!to.meta.requiresAuth) return;
-  const authentication = useAuthStore();
-  if (!authentication.isAuthenticated) {
+  const auth = useAuthStore();
+
+  const requiresAuth = to.matched.some((r) => r.meta.requiresAuth);
+
+  if (requiresAuth && !auth.isAuthenticated) {
     return { name: "authentication", query: { next: to.fullPath } };
   }
 });

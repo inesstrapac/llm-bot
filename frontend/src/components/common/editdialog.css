@@ -1,0 +1,111 @@
+/* overlay behind the panel (REPLACE) */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(61, 47, 35, 0.35);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+}
+
+/* full-screen wrapper that centers the dialog panel (KEEP YOURS IF IDENTICAL) */
+.hdui__wrap {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 1001; /* above overlay */
+}
+
+/* square, cute panel (REPLACE) */
+.modal {
+  width: clamp(320px, 70vmin, 460px);
+  aspect-ratio: 1.5 / 1;
+
+  display: grid; /* header / body / footer */
+  grid-template-rows: 56px 1fr 56px;
+
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.18),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* header with centered title (REPLACE) */
+.modal__header {
+  position: relative;
+  place-content: center;
+  background: transparent;
+  border-bottom: 1px solid var(--c-line);
+}
+.modal__title {
+  margin: 0;
+  text-align: center;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: var(--c-text);
+}
+/* NEW: round close button pinned top-right */
+.modal__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+/* body centered; scrolls if content exceeds square (REPLACE) */
+.modal__body {
+  padding: clamp(14px, 4vmin, 22px);
+  display: grid;
+  align-content: center; /* vertical center */
+  justify-items: center; /* horizontal center */
+  place-items: center;
+  overflow: auto;
+}
+
+/* footer (REPLACE) */
+.modal__footer {
+  padding: 12px 16px;
+  background: transparent;
+  border-top: 1px solid var(--c-line);
+}
+
+/* ---- form niceties (ADD) ---- */
+.edit-form {
+  width: 100%;
+  max-width: clamp(280px, 84%, 420px);
+  display: grid;
+  gap: 50px;
+  justify-items: stretch;
+}
+.form-label {
+  font-weight: 700;
+  color: var(--c-text);
+}
+.form-input {
+  width: 100%;
+  border: 1px solid var(--c-line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+  background: #fff;
+  color: var(--c-text);
+}
+.form-input:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 3px rgba(139, 94, 52, 0.25);
+}
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center; /* center Save / Cancel */
+  margin-top: 6px;
+}

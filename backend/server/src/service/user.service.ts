@@ -1,14 +1,14 @@
 // src/user/user.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, LoginDto, RegisterDto } from '../entities/user.entity';
+import { User, UpdateUserDto } from '../entities/user.entity';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User)
-    private userRepository: Repository<User>,
+    private readonly userRepository: Repository<User>,
   ) {}
 
   findAll(): Promise<User[]> {
@@ -23,11 +23,17 @@ export class UserService {
     return this.userRepository.save(this.userRepository.create(user));
   }
 
-  findById(id: number) {
-    return this.userRepository.findOne({ where: { id } });
+  findById(userId: number) {
+    return this.userRepository.findOne({ where: { id: userId } });
   }
 
-  updateUser(id: number, data: Partial<User>) {
-    return this.userRepository.update({ id: id }, data);
+  async updateUser(userId: number, data: UpdateUserDto) {
+    const updatedUser = await this.userRepository.preload({
+      id: userId,
+      ...data,
+    });
+    if (!updatedUser) throw new NotFoundException('User not found');
+    const savedUser = await this.userRepository.save(updatedUser);
+    return savedUser;
   }
 }

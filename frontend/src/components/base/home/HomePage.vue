@@ -7,6 +7,9 @@
       </div>
       <div class="home-links">
         <RouterLink to="/chat" class="home-btn">Chat</RouterLink>
+        <RouterLink v-if="isAdmin" to="/users" class="home-btn"
+          >Users</RouterLink
+        >
         <RouterLink to="/settings" class="home-btn">Settings</RouterLink>
         <RouterLink to="/chat" class="home-btn"
           >Third option leading to chat right now</RouterLink
@@ -18,4 +21,9 @@
 
 <script setup>
 import "./homepage.css";
+import { useAuthStore } from "@/features/auth/store/auth.store";
+import { computed } from "vue";
+
+const auth = useAuthStore();
+const isAdmin = computed(() => auth.user?.role === "admin");
 </script>

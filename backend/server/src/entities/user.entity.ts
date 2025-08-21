@@ -1,6 +1,12 @@
 // src/entities/user.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export enum UserRole {
   USER = 'user',
@@ -40,4 +46,13 @@ export class RegisterDto {
   @IsString() surname: string;
   @IsEmail() email: string;
   @IsString() @MinLength(8) password: string;
+}
+
+export class UpdateUserDto {
+  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsString() surname?: string;
+  @IsOptional() @IsEmail() email?: string;
+  @IsOptional() @IsString() password?: string;
+  @IsOptional() @IsString() role?: UserRole;
+  @IsOptional() @IsBoolean() isActive?: boolean;
 }

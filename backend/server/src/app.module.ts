@@ -5,6 +5,7 @@ import { UserModule } from './module/user.module';
 import { AuthModule } from './authorization/auth.module';
 import { LlmModule } from './module/llm.module';
 import { DevBootstrapService } from './seeding/admin.seeder';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { DevBootstrapService } from './seeding/admin.seeder';
     AuthModule,
     UserModule,
     LlmModule,
+    JwtModule.register({}),
   ],
   providers: [DevBootstrapService],
 })
