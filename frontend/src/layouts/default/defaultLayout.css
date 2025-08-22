@@ -3,7 +3,6 @@
   --sb-w: 240px; /* desired sidebar width */
   --gutter: 80px; /* the visible rim around the main card (≈38px). Use 40px if you prefer pixels */
   --card-radius: 18px;
-  --card-bg: white;
   --gutter-sb: 150px;
 }
 

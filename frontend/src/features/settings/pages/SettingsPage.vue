@@ -1,6 +1,6 @@
 <template>
   <div class="main-container fill-parent">
-    <div class="card card--flush card--edge">
+    <div class="settings-card card--flush card--edge">
       <table class="settings-table">
         <colgroup>
           <col class="col-name" />
@@ -38,9 +38,6 @@
                 @click="settingsStore.startEdit(row)"
               >
                 Edit
-              </button>
-              <button class="btn btn--ghost" :disabled="!row.deletable">
-                Delete
               </button>
             </td>
           </tr>

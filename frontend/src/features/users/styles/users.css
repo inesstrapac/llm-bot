@@ -1,0 +1,245 @@
+:root {
+  --c-bg: #f8f3ea;
+  --c-surface: #fffaf3;
+  --c-line: #eadfce;
+  --c-line-soft: #efe6d7;
+  --c-text: #3d2f23;
+  --c-muted: #8a7561;
+
+  --c-header: #d5b08b5d;
+  --c-primary: #8b5e34;
+  --c-primary-700: #7a502b;
+  --c-primary-800: #6b4424;
+  --c-primary-50: #fbf5ee;
+  --pad: clamp(12px, 3vw, 24px);
+}
+
+/* ---------- page scaffolding ---------- */
+.settings {
+  display: grid;
+  gap: 16px;
+}
+.settings__title {
+  margin: 0 0 8px;
+  color: var(--c-text);
+}
+
+/* ---------- card ---------- */
+.user-card {
+  background: var(--c-surface);
+  border-radius: 16px;
+  border: 1px solid var(--c-line);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 8px 24px rgba(0, 0, 0, 0.03);
+  padding: 16px;
+}
+.card--flush {
+  padding: 0;
+  overflow: hidden;
+}
+.card--edge {
+  margin: calc(var(--pad) * -1);
+  border-radius: inherit;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- table wrapper for small screens ---------- */
+.card--edge {
+  overflow: auto;
+} /* enable horizontal scroll if needed */
+.settings-table {
+  min-width: 720px;
+} /* avoid super-narrow columns */
+
+/* ---------- table ---------- */
+.settings-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto; /* let columns size to content */
+  color: var(--c-text);
+}
+
+/* cells */
+.settings-table th,
+.settings-table td {
+  padding: 14px 16px;
+  box-sizing: border-box;
+  vertical-align: middle;
+  text-align: left; /* LEFT align by default */
+  line-height: 1.35;
+  white-space: nowrap; /* keep words on one line */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* header */
+.settings-table thead th {
+  background: var(--c-header);
+  font-weight: 700;
+  border-bottom: 1px solid var(--c-line);
+}
+
+/* subtle full-width row separator */
+.settings-table tbody tr {
+  box-shadow: inset 0 -1px 0 var(--c-line-soft);
+}
+.settings-table tbody tr:last-child {
+  box-shadow: none;
+}
+.settings-table tbody tr:hover {
+  background: #fffdf8;
+}
+
+/* column sizing (matches your 6 <col> elements order) */
+.settings-table col:nth-of-type(1) {
+  width: 180px;
+} /* Name */
+.settings-table col:nth-of-type(2) {
+  width: 180px;
+} /* Surname */
+.settings-table col:nth-of-type(3) {
+  width: 280px;
+} /* Email */
+.settings-table col:nth-of-type(4) {
+  width: 120px;
+} /* Role */
+.settings-table col:nth-of-type(5) {
+  width: 100px;
+} /* Active */
+.settings-table col:nth-of-type(6) {
+  width: 220px;
+} /* Actions */
+
+/* specific cells */
+.cell-name {
+  font-weight: 700;
+  color: var(--c-text);
+}
+.cell-value {
+  color: var(--c-text);
+}
+.muted {
+  color: var(--c-muted);
+}
+
+/* actions on the right */
+.settings-table thead th:nth-child(6),
+.settings-table tbody td:nth-child(6) {
+  text-align: right;
+}
+
+.cell-actions {
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+/* ---------- buttons (brown & cute) ---------- */
+.btn {
+  appearance: none;
+  border: 1px solid var(--c-primary);
+  background: var(--c-primary);
+  color: #fff;
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  line-height: 1;
+  transition:
+    transform 0.06s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    color 0.15s ease;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+.btn:hover {
+  background: var(--c-primary-700);
+  border-color: var(--c-primary-700);
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 3px rgba(139, 94, 52, 0.25);
+}
+
+.btn.btn--ghost {
+  background: #fff;
+  color: var(--c-primary-800);
+  border-color: var(--c-line);
+}
+.btn.btn--ghost:hover {
+  background: var(--c-primary-50);
+  border-color: var(--c-primary);
+  color: var(--c-primary-800);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: saturate(0.8);
+}
+/* --- viewport: scroll rows if page is short --- */
+.table-viewport {
+  /* Adjust the 240px if your header/top bars are taller/shorter */
+  max-height: calc(100vh - 240px);
+  overflow-y: auto; /* vertical scrollbar when needed */
+  overflow-x: auto; /* keep wide tables usable */
+}
+
+/* Keep header visible while scrolling */
+.settings-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--c-header);
+  /* reapply border in case sticky overlays it */
+  border-bottom: 1px solid var(--c-line);
+}
+
+/* Constant row height */
+.settings-table tbody tr {
+  height: 52px; /* pick your favorite row height (48–56px works well) */
+}
+
+/* Make content fit inside the fixed row height */
+.settings-table th,
+.settings-table td {
+  padding: 12px 16px; /* slightly tighter so 52px height feels right */
+  line-height: 1.3;
+  white-space: nowrap; /* keep on one line */
+  overflow: hidden; /* clip extra */
+  text-overflow: ellipsis; /* show "…" when clipped */
+  vertical-align: middle; /* center vertically */
+}
+
+/* Optional: slightly darker header text for contrast */
+.settings-table thead th {
+  color: var(--c-text);
+}
+
+/* Optional: give the container (card) room to flex */
+.card--edge {
+  display: flex;
+  flex-direction: column;
+}
+.table-viewport {
+  flex: 1 1 auto; /* let the viewport grow inside the card */
+}
+
+.settings-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  /* Solid base + tinted overlay (keeps your color but blocks rows) */
+  background:
+    linear-gradient(var(--c-header), var(--c-header)),
+    /* tint (can be semi-transparent) */ var(--c-surface); /* solid base */
+  border-bottom: 1px solid var(--c-line);
+}

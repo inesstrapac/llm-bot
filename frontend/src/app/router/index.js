@@ -8,6 +8,7 @@ import AuthenticationPage from "../../features/auth/pages/AuthenticationPage.vue
 import HomePage from "../../components/base/home/HomePage.vue";
 import ChatPage from "../../features/chat/pages/ChatPage.vue";
 import SettingsPage from "@/features/settings/pages/SettingsPage.vue";
+import UsersPage from "@/features/users/pages/UsersPage.vue";
 
 const routes = [
   { path: "/", redirect: { name: "authentication" } },
@@ -25,6 +26,7 @@ const routes = [
       { path: "homepage", name: "homepage", component: HomePage },
       { path: "chat", name: "chat", component: ChatPage },
       { path: "settings", name: "settings", component: SettingsPage },
+      { path: "users", name: "users", component: UsersPage },
     ],
   },
 ];
