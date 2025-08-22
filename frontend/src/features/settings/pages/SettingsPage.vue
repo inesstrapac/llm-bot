@@ -58,19 +58,67 @@
               settingsStore.editingRow &&
               settingsStore.editingRow.key !== 'isActive'
             "
+            class="edit-form-setting"
           >
+            <label
+              v-if="settingsStore.editingRow.key === 'password'"
+              class="form-label"
+              >Old {{ settingsStore.editingRow?.key }}</label
+            >
+            <div
+              v-if="settingsStore.editingRow.key === 'password'"
+              class="relative w-full"
+            >
+              <input
+                ref="inputRef"
+                class="form-input w-full pr-10"
+                :type="settingsStore.showOldPassword ? 'text' : 'password'"
+                v-model="settingsStore.oldPassword"
+              />
+
+              <button
+                type="button"
+                @click="
+                  settingsStore.showOldPassword = !settingsStore.showOldPassword
+                "
+                class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700 bg-transparent border-0 outline-none"
+                aria-label="Toggle password visibility"
+              >
+                <span>👁️</span>
+              </button>
+            </div>
             <label
               class="form-label"
               :for="`field-${settingsStore.editingRow.key}`"
               >{{ settingsStore.editingRow?.label }}</label
             >
-            <input
-              :id="`field-${settingsStore.editingRow.key}`"
-              ref="inputRef"
-              class="form-input"
-              type="text"
-              v-model="settingsStore.inputText"
-            />
+            <div class="relative w-full">
+              <input
+                :id="`field-${settingsStore.editingRow.key}`"
+                ref="inputRef"
+                class="form-input w-full pr-10"
+                :type="
+                  (settingsStore.editingRow.key === 'password' &&
+                    settingsStore.showNewPassword) ||
+                  settingsStore.editingRow.key !== 'password'
+                    ? 'text'
+                    : 'password'
+                "
+                v-model="settingsStore.inputText"
+              />
+
+              <button
+                v-if="settingsStore.editingRow.key === 'password'"
+                type="button"
+                @click="
+                  settingsStore.showNewPassword = !settingsStore.showNewPassword
+                "
+                class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700 bg-transparent border-0 outline-none"
+                aria-label="Toggle password visibility"
+              >
+                <span>👁️</span>
+              </button>
+            </div>
           </div>
           <div class="modal-actions">
             <button class="btn" type="submit">Save</button>

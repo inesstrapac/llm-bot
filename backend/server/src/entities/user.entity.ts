@@ -52,6 +52,7 @@ export class UpdateUserDto {
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsString() surname?: string;
   @IsOptional() @IsEmail() email?: string;
+  @IsOptional() @IsString() oldPassword?: string;
   @IsOptional() @IsString() password?: string;
   @IsOptional() @IsString() role?: UserRole;
   @IsOptional() @IsBoolean() isActive?: boolean;

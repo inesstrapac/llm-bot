@@ -14,15 +14,14 @@
   display: grid;
   place-items: center;
   padding: 16px;
-  z-index: 1001; /* above overlay */
+  z-index: 1001;
 }
 
-/* square, cute panel (REPLACE) */
 .modal {
   width: clamp(320px, 70vmin, 460px);
-  aspect-ratio: 1.5 / 1;
+  aspect-ratio: 1.25 / 1;
 
-  display: grid; /* header / body / footer */
+  display: grid;
   grid-template-rows: 56px 1fr 56px;
 
   background: var(--c-surface);
@@ -34,7 +33,6 @@
     0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-/* header with centered title (REPLACE) */
 .modal__header {
   position: relative;
   place-content: center;
@@ -48,7 +46,6 @@
   letter-spacing: 0.2px;
   color: var(--c-text);
 }
-/* NEW: round close button pinned top-right */
 .modal__close {
   position: absolute;
   top: 10px;
@@ -61,7 +58,6 @@
   padding: 0;
 }
 
-/* body centered; scrolls if content exceeds square (REPLACE) */
 .modal__body {
   padding: clamp(14px, 4vmin, 22px);
   display: grid;
@@ -71,25 +67,29 @@
   overflow: auto;
 }
 
-/* footer (REPLACE) */
 .modal__footer {
   padding: 12px 16px;
   background: transparent;
   border-top: 1px solid var(--c-line);
 }
 
-/* ---- form niceties (ADD) ---- */
 .edit-form {
   width: 100%;
   max-width: clamp(280px, 84%, 420px);
   display: grid;
-  gap: 50px;
+  gap: 30px;
   justify-items: stretch;
 }
 .form-label {
   font-weight: 700;
   color: var(--c-text);
 }
+
+.edit-form-setting {
+  display: grid;
+  gap: 10px;
+}
+
 .form-input {
   width: 100%;
   border: 1px solid var(--c-line);
@@ -106,6 +106,6 @@
 .modal-actions {
   display: flex;
   gap: 10px;
-  justify-content: center; /* center Save / Cancel */
+  justify-content: center;
   margin-top: 6px;
 }

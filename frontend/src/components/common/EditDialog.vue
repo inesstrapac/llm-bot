@@ -1,9 +1,7 @@
 <template>
-  <!-- 1) Portal to body -->
   <teleport to="body">
     <TransitionRoot :show="open" as="template">
       <Dialog as="div" class="hdui" @close="emit('close')">
-        <!-- overlay -->
         <TransitionChild
           as="template"
           enter="ease-out duration-150"
@@ -16,7 +14,6 @@
           <div class="modal-overlay" />
         </TransitionChild>
 
-        <!-- 2) fixed full-screen wrapper that centers the panel -->
         <div class="hdui__wrap">
           <TransitionChild
             as="template"

@@ -8,16 +8,55 @@ export const useSettingsStore = defineStore("settings", () => {
   const showDialog = ref(false);
   const editingRow = ref(null);
   const inputText = ref("");
+  const oldPassword = ref("");
   const valueBool = ref(false);
   const inputRef = ref(null);
   const loading = ref(false);
+  const showNewPassword = ref(false);
+  const showOldPassword = ref(false);
   function $resetState() {
-    showDialog.value = false;
     editingRow.value = null;
     inputText.value = "";
+    oldPassword.value = "";
     valueBool.value = false;
     inputRef.value = null;
     loading.value = false;
+    showNewPassword.value = false;
+    showOldPassword.value = false;
+  }
+
+  function startEdit(row) {
+    $resetState();
+    editingRow.value = row;
+    if (row.key === "isActive") {
+      valueBool.value = !!authStore.user?.isActive;
+    } else if (row.key === "password") {
+      inputText.value = "";
+    } else {
+      inputText.value = (row.value ?? "").toString();
+      nextTick(() => inputRef.value?.focus());
+    }
+    showDialog.value = true;
+  }
+
+  function cancelEdit() {
+    showDialog.value = false;
+    editingRow.value = null;
+  }
+
+  async function saveEdit() {
+    if (!editingRow.value) return;
+
+    const key = editingRow.value.key;
+    const next =
+      key === "isActive" ? !!valueBool.value : inputText.value.trim();
+
+    if (oldPassword.value) {
+      await updateUser({ oldPassword: oldPassword.value, [key]: next });
+    } else {
+      await updateUser({ [key]: next });
+    }
+    cancelEdit();
   }
 
   async function updateUser(dataToUpdate) {
@@ -30,29 +69,6 @@ export const useSettingsStore = defineStore("settings", () => {
     } finally {
       loading.value = false;
     }
-  }
-
-  function startEdit(row) {
-    editingRow.value = row;
-    if (row.key === "isActive") {
-      valueBool.value = !!authStore.user?.isActive;
-    } else {
-      inputText.value = (row.value ?? "").toString();
-      nextTick(() => inputRef.value?.focus());
-    }
-    showDialog.value = true;
-  }
-  function cancelEdit() {
-    showDialog.value = false;
-    editingRow.value = null;
-  }
-  async function saveEdit() {
-    if (!editingRow.value) return;
-    const key = editingRow.value.key;
-    const next =
-      key === "isActive" ? !!valueBool.value : inputText.value.trim();
-    await updateUser({ [key]: next });
-    cancelEdit();
   }
 
   const rows = computed(() => [
@@ -104,6 +120,9 @@ export const useSettingsStore = defineStore("settings", () => {
     showDialog,
     editingRow,
     inputText,
+    oldPassword,
+    showOldPassword,
+    showNewPassword,
     rows,
     startEdit,
     cancelEdit,

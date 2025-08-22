@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -105,11 +106,18 @@ export class AuthService {
     return { user: this.strip({ ...user, isActive: true }) };
   }
 
+  async checkPassword(userId: number, password: string) {
+    const user = await this.users.findById(userId);
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+
+    const ok = await bcrypt.compare(password, user.password);
+    return ok;
+  }
+
   async refresh(req: any, res: Response) {
     const token = req.cookies?.refresh_token;
     if (!token) throw new UnauthorizedException('No refresh token');
 
-    // verify refresh token
     let payload: any;
     try {
       payload = await this.jwt.verifyAsync(token, {
@@ -146,8 +154,19 @@ export class AuthService {
   }
 
   async updateUser(userId: number, data: UpdateUserDto) {
+    if (data.password) {
+      if (!data.oldPassword) {
+        throw new BadRequestException('Old password is required');
+      }
+      const passwordsMatch = await this.checkPassword(userId, data.oldPassword);
+      if (!passwordsMatch) {
+        throw new BadRequestException('Passwords do not match');
+      } else {
+        const hashedNewPassword = await this.passwordHash(data.password);
+        data = { password: hashedNewPassword };
+      }
+    }
     const updatedUser = await this.users.updateUser(userId, data);
-    updatedUser.password = await this.passwordHash(updatedUser.password);
     return updatedUser;
   }
 }
