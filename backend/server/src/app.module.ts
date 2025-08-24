@@ -6,6 +6,8 @@ import { AuthModule } from './authorization/auth.module';
 import { LlmModule } from './module/llm.module';
 import { DevBootstrapService } from './seeding/admin.seeder';
 import { JwtModule } from '@nestjs/jwt';
+import { ConversationModule } from './module/conversation.module';
+import { MessageModule } from './module/message.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { JwtModule } from '@nestjs/jwt';
       inject: [ConfigService],
     }),
     AuthModule,
+    ConversationModule,
+    MessageModule,
     UserModule,
     LlmModule,
     JwtModule.register({}),

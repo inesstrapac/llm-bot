@@ -1,5 +1,5 @@
 // src/entities/user.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import {
   IsBoolean,
   IsEmail,
@@ -7,6 +7,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
+import { Conversation } from './conversation.entity';
 
 export enum UserRole {
   USER = 'user',
@@ -34,6 +35,9 @@ export class User {
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role: UserRole;
+
+  @OneToMany(() => Conversation, (conversation) => conversation.user)
+  conversations: Conversation[];
 }
 
 export class LoginDto {
