@@ -2,33 +2,32 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Message } from 'src/entities/Message.entity';
-import { Conversation } from 'src/entities/conversation.entity';
+import { Message } from 'src/entities/message.entity';
+import { ConversationService } from './conversation.service';
 
 @Injectable()
 export class MessageService {
   constructor(
     @InjectRepository(Message)
-    private readonly MessageRepository: Repository<Message>,
-    private readonly ConversationRepository: Repository<Conversation>,
+    private readonly messageRepository: Repository<Message>,
+    private readonly conversationService: ConversationService,
   ) {}
 
   findAllByConversationId(conversationId: number): Promise<Message[]> {
-    return this.MessageRepository.find({
+    return this.messageRepository.find({
       where: { conversation: { id: conversationId } },
     });
   }
 
   async create(message: Partial<Message>, userId: number) {
     if (message.conversation?.id == null) {
-      let conversation = this.ConversationRepository.create({
+      let conversation = await this.conversationService.create({
         name: 'New conversation', //TODO UPDATE THIS SO NAME IS PROPERLY SET
         user: { id: userId } as any,
         dateCreated: new Date(),
       });
-      conversation = await this.ConversationRepository.save(conversation);
       message.conversation = conversation;
     }
-    return this.MessageRepository.save(this.MessageRepository.create(message));
+    return this.messageRepository.save(this.messageRepository.create(message));
   }
 }

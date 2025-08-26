@@ -1,6 +1,6 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ConversationService } from 'src/service/conversation.service.';
+import { ConversationService } from 'src/service/conversation.service';
 import { Conversation } from 'src/entities/conversation.entity';
 
 @Controller('conversations')

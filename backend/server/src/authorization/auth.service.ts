@@ -18,7 +18,7 @@ import {
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly users: UserService,
+    private readonly userService: UserService,
     private readonly jwt: JwtService,
   ) {}
 
@@ -62,7 +62,7 @@ export class AuthService {
   }
 
   async register(data: RegisterDto) {
-    const existing = await this.users.findByEmail(data.email);
+    const existing = await this.userService.findByEmail(data.email);
     if (existing) throw new ConflictException('Email already registered');
 
     const hashedPassword = await this.passwordHash(data.password);
@@ -72,7 +72,7 @@ export class AuthService {
       isActive: false,
     };
 
-    const user = await this.users.create(newUser);
+    const user = await this.userService.create(newUser);
     return this.strip(user);
   }
 
@@ -83,13 +83,13 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, res: Response) {
-    const user = await this.users.findByEmail(dto.email);
+    const user = await this.userService.findByEmail(dto.email);
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const ok = await bcrypt.compare(dto.password, user.password);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
 
-    await this.users
+    await this.userService
       .updateUser(user.id, { isActive: true })
       .catch(() => undefined);
 
@@ -107,7 +107,7 @@ export class AuthService {
   }
 
   async checkPassword(userId: number, password: string) {
-    const user = await this.users.findById(userId);
+    const user = await this.userService.findById(userId);
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const ok = await bcrypt.compare(password, user.password);
@@ -129,7 +129,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const user = await this.users.findById(Number(payload.sub));
+    const user = await this.userService.findById(Number(payload.sub));
     if (!user) throw new UnauthorizedException('User not found');
 
     // (Optional) rotation: issue a brand-new refresh cookie
@@ -166,7 +166,7 @@ export class AuthService {
         data = { password: hashedNewPassword };
       }
     }
-    const updatedUser = await this.users.updateUser(userId, data);
+    const updatedUser = await this.userService.updateUser(userId, data);
     return updatedUser;
   }
 }

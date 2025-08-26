@@ -1,52 +1,90 @@
-# backend/ai/src/service.py
 import os
 from pathlib import Path
 from typing import List, Tuple, Dict, Protocol
+from urllib.parse import urlparse
 
+import requests
 import chromadb
 from chromadb import HttpClient
-from chromadb.utils import embedding_functions  # optional alt approach
-from sentence_transformers import SentenceTransformer
 
 
+# ---------- simple placeholder ----------
 def run_ai_logic(input_text: str) -> str:
-    # Replace with actual model prediction logic
     return f"Processed by AI: {input_text}"
 
 
-# -------- Config --------
-CHROMA_HOST = os.getenv("CHROMA_HOST", "chroma")
-CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8000"))
-CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "repo")
-
-EMBED_MODEL = os.getenv("EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-EMBED_DIM = int(os.getenv("EMBED_DIM", "384"))
-
-# -------- Protocols (interfaces) --------
+# ---------- Protocols ----------
 class Embedder(Protocol):
-    def encode(self, texts: List[str]): ...
+    def encode(self, texts: List[str]) -> List[List[float]]: ...
+
 
 class VectorStore(Protocol):
-    def upsert_many(self, rows: List[Tuple[str, int, str, list]]) -> None: ...
-    def search(self, q_vec, k: int = 5) -> List[Tuple[str, int, str]]: ...
+    def upsert_many(self, rows: List[Tuple[str, int, str, List[float]]]) -> None: ...
+    def search(self, q_vec: List[float], k: int = 5) -> List[Tuple[str, int, str]]: ...
 
-from fastembed import TextEmbedding
 
-class FastEmbedder:
-    def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5"):
-        self.model = TextEmbedding(model_name)
-    def encode(self, texts):
-        # TextEmbedding returns a generator of arrays — collect into a list
-        return [vec for vec in self.model.embed(texts)]
+# ---------- Embedding backends ----------
+BACKEND = os.getenv("EMBEDDING_BACKEND", "fastembed").lower()
 
+
+class SentenceTfmEmbedder:
+    """
+    Lightweight, backend-agnostic embedder:
+      - fastembed (default): uses the TextEmbedding model locally
+      - ollama: calls /api/embeddings on the Ollama server
+    Always returns List[List[float]].
+    """
+
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+        if BACKEND == "fastembed":
+            from fastembed import TextEmbedding  # small dependency, fast to install
+            self._embedder = TextEmbedding(model_name=model_name)
+            self._mode = "fastembed"
+        elif BACKEND == "ollama":
+            self._mode = "ollama"
+            self._ollama_url = os.getenv("OLLAMA_URL", "http://ollama:11434")
+            self._ollama_model = model_name or os.getenv("EMBED_MODEL", "nomic-embed-text")
+        else:
+            raise ValueError(f"Unknown EMBEDDING_BACKEND={BACKEND}")
+
+    def encode(self, texts: List[str]) -> List[List[float]]:
+        if isinstance(texts, str):
+            texts = [texts]
+
+        if self._mode == "fastembed":
+            # fastembed returns a generator of arrays; cast to list[list[float]]
+            return [list(vec) for vec in self._embedder.embed(texts)]
+
+        # ollama
+        resp = requests.post(
+            f"{self._ollama_url}/api/embeddings",
+            json={"model": self._ollama_model, "input": texts},
+            timeout=60,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        # Ollama returns a single "embedding" for str; "embeddings" for list
+        if "embedding" in data:
+            return [data["embedding"]]
+        return [item["embedding"] for item in data.get("embeddings", [])]
+
+
+# ---------- Chroma store ----------
 class ChromaStore:
-    """Thin wrapper over Chroma HTTP client."""
-    def __init__(self, host: str = CHROMA_HOST, port: int = CHROMA_PORT, collection: str = CHROMA_COLLECTION):
-        self.client: HttpClient = chromadb.HttpClient(host=host, port=port)
-        # When using HttpClient, we embed on our side; don't pass embedding_function here.
+    """Works with Chroma v2 server."""
+    def __init__(self, url: str, collection: str):
+        parsed = urlparse(url)
+        host = parsed.hostname or "chroma"
+        port = int(parsed.port or 8000)
+        tenant = os.getenv("CHROMA_TENANT", "default_tenant")
+        database = os.getenv("CHROMA_DATABASE", "default_database")
+        self.client: HttpClient = chromadb.HttpClient(
+            host=host, port=port, tenant=tenant, database=database
+        )
         self.col = self.client.get_or_create_collection(name=collection)
 
-    def upsert_many(self, rows: List[Tuple[str, int, str, list]]) -> None:
+    def upsert_many(self, rows: List[Tuple[str, int, str, List[float]]]) -> None:
         """
         rows: list of (path, chunk_id, content, embedding_list)
         """
@@ -60,23 +98,27 @@ class ChromaStore:
             embs.append(emb)
         self.col.add(ids=ids, documents=docs, metadatas=metas, embeddings=embs)
 
-    def search(self, q_vec, k: int = 5) -> List[Tuple[str, int, str]]:
-        res = self.col.query(query_embeddings=[q_vec.tolist()], n_results=k)
+    def search(self, q_vec: List[float], k: int = 5) -> List[Tuple[str, int, str]]:
+        res = self.col.query(query_embeddings=[q_vec], n_results=k)
         out: List[Tuple[str, int, str]] = []
         if res and res.get("ids"):
-            for i in range(len(res["ids"][0])):
+            n = len(res["ids"][0])
+            for i in range(n):
                 meta = res["metadatas"][0][i]
                 doc = res["documents"][0][i]
                 out.append((meta["path"], meta["chunk_id"], doc))
         return out
 
-# -------- RAG orchestration --------
+
+# ---------- RAG orchestration ----------
 def chunk_text(text: str, size: int = 800, overlap: int = 120) -> List[str]:
     chunks, start = [], 0
+    step = max(size - overlap, 1)
     while start < len(text):
-        chunks.append(text[start:start+size])
-        start += max(size - overlap, 1)
+        chunks.append(text[start : start + size])
+        start += step
     return chunks
+
 
 class RAGService:
     def __init__(self, embedder: Embedder, store: VectorStore):
@@ -104,8 +146,8 @@ class RAGService:
         if not chunks:
             return {"ok": False, "message": "No chunks ingested."}
 
-        embs = self.embedder.encode(chunks)
-        rows = [(metas[i][0], metas[i][1], chunks[i], embs[i].tolist()) for i in range(len(chunks))]
+        embs = self.embedder.encode(chunks)  # List[List[float]]
+        rows = [(metas[i][0], metas[i][1], chunks[i], embs[i]) for i in range(len(chunks))]
         self.store.upsert_many(rows)
         return {"ok": True, "files": len(files), "chunks": len(chunks)}
 
