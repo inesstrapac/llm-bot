@@ -1,48 +1,93 @@
-# src/main.py
+
+import json
 import os
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from dotenv import load_dotenv
+from typing import Optional, Dict, Any, List
+ 
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.responses import JSONResponse
+ 
+from .service import *
+ 
+CHROMA_HOST = os.getenv("CHROMA_HOST", "chroma")
+CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8000"))
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://192.168.88.224:11434")
+ 
+app = FastAPI(title="Chroma PDF Ingestion & RAG API")
 
-from .service import SentenceTfmEmbedder, ChromaStore, RAGService
-from .routes import router
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}
 
-load_dotenv()
+@app.get("/")
+def root():
+    return {"message": "I am a little cat."}
 
+@app.get("/hello")
+def hello():
+    return {"message": "hello from ai"}
 
-def _default_embed_model() -> str:
-    """
-    Choose a default model that matches the selected embedding backend.
-    - fastembed: small + fast default
-    - ollama: default to nomic-embed-text (ships with Ollama)
-    """
-    backend = os.getenv("EMBEDDING_BACKEND", "fastembed").lower()
-    if backend == "ollama":
-        return os.getenv("EMBED_MODEL", "nomic-embed-text")
-    # fastembed
-    return os.getenv("EMBED_MODEL", "BAAI/bge-small-en-v1.5")
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    embedder = SentenceTfmEmbedder(_default_embed_model())
-    store = ChromaStore(
-        url=os.getenv("CHROMA_URL", "http://chroma:8000"),
-        collection=os.getenv("CHROMA_COLLECTION", "repo"),
+ 
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "chroma": f"{CHROMA_HOST}:{CHROMA_PORT}",
+        "ollama": OLLAMA_BASE_URL,
+    }
+ 
+@app.post("/ingest")
+async def ingest_pdf(
+    file: UploadFile = File(...),
+    collection: Optional[str] = Form(None),
+    metadata_json: Optional[str] = Form(None),
+):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    try:
+        metadata: Optional[Dict[str, Any]] = json.loads(metadata_json) if metadata_json else None
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="metadata_json must be valid JSON.")
+    print(file)
+    content = await file.read()
+    res = ingest_pdf_bytes(content, file.filename, collection_name=collection, metadata=metadata)
+    return JSONResponse(res)
+ 
+@app.post("/query")
+async def query(payload: Dict[str, Any]):
+    query = payload.get("query")
+    if not query:
+        raise HTTPException(status_code=400, detail="Missing 'query' field.")
+    k = int(payload.get("k", 4))
+    collection = payload.get("collection")
+    metadata_filter = payload.get("filter")
+    by_vector = bool(payload.get("by_vector", False))
+ 
+    if by_vector:
+        return similarity_search_by_vector(query, k=k, collection_name=collection, metadata_filter=metadata_filter)
+    return similarity_search(query, k=k, collection_name=collection, metadata_filter=metadata_filter)
+ 
+@app.post("/delete")
+async def delete_ids(payload: Dict[str, Any]):
+    ids: List[str] = payload.get("ids") or []
+    if not ids:
+        raise HTTPException(status_code=400, detail="Provide 'ids' to delete.")
+    collection = payload.get("collection")
+    return delete_ids(ids, collection_name=collection)
+ 
+@app.post("/ask")
+async def askQuestion(payload: Dict[str, Any]):
+    question = payload.get("question")
+    if not question:
+        raise HTTPException(status_code=400, detail="Missing 'question' field.")
+    k = int(payload.get("k", 4))
+    collection = payload.get("collection")
+    metadata_filter = payload.get("filter")
+    by_vector = bool(payload.get("by_vector", False))
+ 
+    return ask(
+        question=question,
+        k=k,
+        collection_name=collection,
+        metadata_filter=metadata_filter,
+        by_vector=by_vector,
     )
-    app.state.rag = RAGService(embedder, store)
-    yield
-
-
-def create_app() -> FastAPI:
-    app = FastAPI(
-        title="AI Microservice",
-        description="Handles AI-based requests",
-        version="1.0.0",
-        lifespan=lifespan,
-    )
-    app.include_router(router)
-    return app
-
-
-app = create_app()

@@ -1,9 +1,11 @@
 :root {
-  --nav-h: 56px; /* match your navbar height */
-  --sb-w: 240px; /* desired sidebar width */
-  --gutter: 80px; /* the visible rim around the main card (≈38px). Use 40px if you prefer pixels */
+  --nav-h: 56px;
+  --sb-w: 240px;
+  --gutter: 80px;
   --card-radius: 18px;
-  --gutter-sb: 150px;
+  --card-bg: white;
+  --gutter-sb: 200px;
+  --gutter-sbc: 150px;
 }
 
 .app-shell {
@@ -18,9 +20,8 @@
 
   background-position:
     0 0,
-    0 0; /* gradient, image */
-  background-repeat:
-    no-repeat, repeat; /* gradient doesn’t repeat; image tiles */
+    0 0;
+  background-repeat: no-repeat, repeat;
   background-size:
     100% 100%,
     auto;
@@ -54,7 +55,6 @@
   height: 100%;
 }
 
-/* Sidebar column */
 .app-aside {
   flex: 0 0 var(--sb-w);
   width: var(--sb-w);
@@ -73,11 +73,16 @@
     opacity 0.2s ease;
   will-change: width, flex-basis, transform;
 }
+.app-aside.is-chat {
+  height: calc(100% - (2 * var(--gutter-sbc)));
+  margin-bottom: var(--gutter-sbc);
+  margin-top: var(--gutter-sbc);
+}
 
 .app-aside.is-collapsed {
   flex-basis: 0;
   width: 0;
-  transform: translateX(-16px); /* subtle slide to the left */
-  opacity: 0; /* optional fade */
-  pointer-events: none; /* avoid accidental clicks */
+  transform: translateX(-16px);
+  opacity: 0;
+  pointer-events: none;
 }

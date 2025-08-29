@@ -1,8 +1,8 @@
 <template>
   <div class="main-container fill-parent">
-    <div class="user-card card--flush card--edge">
+    <div class="user-card user-card--flush user-card--edge">
       <div class="table-viewport">
-        <table class="settings-table">
+        <table class="users-table">
           <colgroup>
             <col class="col-name" />
             <col class="col-name" />

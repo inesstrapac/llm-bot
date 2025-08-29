@@ -2,8 +2,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Message } from 'src/entities/message.entity';
+import { CreateMessageDto, Message } from 'src/entities/message.entity';
 import { ConversationService } from './conversation.service';
+import { Conversation } from 'src/entities/conversation.entity';
 
 @Injectable()
 export class MessageService {
@@ -19,15 +20,27 @@ export class MessageService {
     });
   }
 
-  async create(message: Partial<Message>, userId: number) {
-    if (message.conversation?.id == null) {
-      let conversation = await this.conversationService.create({
-        name: 'New conversation', //TODO UPDATE THIS SO NAME IS PROPERLY SET
+  async create(message: CreateMessageDto, userId: number) {
+    let conversation: Conversation;
+    if (message.conversationId == null) {
+      conversation = await this.conversationService.create({
+        name: message.content,
         user: { id: userId } as any,
         dateCreated: new Date(),
       });
-      message.conversation = conversation;
+    } else {
+      conversation = await this.conversationService.findById(
+        message.conversationId,
+      );
     }
-    return this.messageRepository.save(this.messageRepository.create(message));
+    const newMessage: Partial<Message> = {
+      content: message.content,
+      conversation: conversation,
+      dateCreated: new Date(),
+      isPrompt: message.isPrompt,
+    };
+    return this.messageRepository.save(
+      this.messageRepository.create(newMessage),
+    );
   }
 }

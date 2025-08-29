@@ -1,21 +1,19 @@
-/* ---------- palette (cute browns) ---------- */
 :root {
-  --c-bg: #f8f3ea; /* page bg hint */
-  --c-surface: #fffaf3; /* card/table surface */
-  --c-line: #eadfce; /* separators */
+  --c-bg: #f8f3ea;
+  --c-surface: #fffaf3;
+  --c-line: #eadfce;
   --c-line-soft: #efe6d7;
-  --c-text: #3d2f23; /* main text (warm dark) */
+  --c-text: #3d2f23;
   --c-muted: #8a7561;
 
   --c-header: #d5b08b5d;
-  --c-primary: #8b5e34; /* brown */
+  --c-primary: #8b5e34;
   --c-primary-700: #7a502b;
   --c-primary-800: #6b4424;
   --c-primary-50: #fbf5ee;
   --pad: clamp(12px, 3vw, 24px);
 }
 
-/* ---------- page scaffolding ---------- */
 .settings {
   display: grid;
   gap: 16px;
@@ -25,7 +23,6 @@
   color: var(--c-text);
 }
 
-/* ---------- card ---------- */
 .settings-card {
   background: var(--c-surface);
   border-radius: 16px;
@@ -35,43 +32,39 @@
     0 8px 24px rgba(0, 0, 0, 0.03);
   padding: 16px;
 }
-.card--flush {
+.settings-card--flush {
   padding: 0;
   overflow: hidden;
 }
-.card--edge {
+.settings-card--edge {
   margin: calc(var(--pad) * -1);
   border-radius: inherit;
   display: flex;
   flex-direction: column;
 }
 
-/* ---------- table ---------- */
 .settings-table {
   width: 100%;
   height: 100%;
-  border-collapse: collapse; /* fixed grid via <col> */
+  border-collapse: collapse;
   table-layout: fixed;
   color: var(--c-text);
 }
 
-/* unified cell box model + spacing + centered content */
 .settings-table th,
 .settings-table td {
   padding: 16px 18px;
   box-sizing: border-box;
   vertical-align: middle;
-  text-align: center; /* center everything */
+  text-align: center;
 }
 
-/* header */
 .settings-table thead th {
   background: var(--c-header);
   font-weight: 700;
   border-bottom: 1px solid var(--c-line);
 }
 
-/* subtle full-width row separator */
 .settings-table tbody tr {
   box-shadow: inset 0 -1px 0 var(--c-line-soft);
 }
@@ -83,12 +76,10 @@
   border-bottom: 0;
 }
 
-/* light hover on rows */
 .settings-table tbody tr:hover {
   background: #fffdf8;
 }
 
-/* column widths bound to actual <col> elements */
 .settings-table col.col-name {
   width: 240px;
 }
@@ -99,7 +90,6 @@
   width: 220px;
 }
 
-/* cells */
 .cell-name {
   font-weight: 700;
   color: var(--c-text);
@@ -112,17 +102,15 @@
   color: var(--c-muted);
 }
 
-/* Actions cell: perfectly centered buttons */
 .cell-actions {
   display: flex;
-  justify-content: center; /* center horizontally */
-  align-items: center; /* center vertically */
+  justify-content: center;
+  align-items: center;
   gap: 10px;
   white-space: nowrap;
   height: 100%;
 }
 
-/* ---------- buttons (brown & cute) ---------- */
 .btn {
   appearance: none;
   border: 1px solid var(--c-primary);

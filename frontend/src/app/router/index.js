@@ -24,7 +24,22 @@ const routes = [
     meta: { layout: "default", requiresAuth: true },
     children: [
       { path: "homepage", name: "homepage", component: HomePage },
-      { path: "chat", name: "chat", component: ChatPage },
+      {
+        path: "chat",
+        name: "chat.new",
+        component: ChatPage,
+        props: { id: null },
+      },
+      {
+        path: "chat/:id(\\d+)",
+        name: "chat",
+        component: ChatPage,
+        props: (route) => ({ id: Number(route.params.id) }),
+        beforeEnter: (to) => {
+          const n = Number(to.params.id);
+          if (!Number.isInteger(n) || n <= 0) return { name: "chat.new" };
+        },
+      },
       { path: "settings", name: "settings", component: SettingsPage },
       { path: "users", name: "users", component: UsersPage },
     ],

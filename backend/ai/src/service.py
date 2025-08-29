@@ -1,166 +1,210 @@
 import os
-from pathlib import Path
-from typing import List, Tuple, Dict, Protocol
-from urllib.parse import urlparse
+import tempfile
+from typing import Dict, List, Optional, Any, Tuple
+ 
+from langchain_ollama import OllamaEmbeddings, ChatOllama
+from langchain_chroma import Chroma
+from langchain_core.documents import Document
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-import requests
-import chromadb
-from chromadb import HttpClient
+ 
+def get_config() -> Dict[str, Any]:
+    return {
+        "chroma_host": os.getenv("CHROMA_HOST", "chroma"),
+        "chroma_port": int(os.getenv("CHROMA_PORT", "8000")),
+        "collection_name": os.getenv("CHROMA_COLLECTION", "my_collection"),
+        "ollama_base_url": os.getenv("OLLAMA_BASE_URL", "http://192.168.88.224:11434"),
+        "ollama_embed_model": os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text"),
+        "ollama_llm_model": os.getenv("OLLAMA_LLM_MODEL", "llama3.1:8b"),
+        "chunk_size": int(os.getenv("CHUNK_SIZE", "800")),
+        "chunk_overlap": int(os.getenv("CHUNK_OVERLAP", "100")),
+    }
 
-
-# ---------- simple placeholder ----------
-def run_ai_logic(input_text: str) -> str:
-    return f"Processed by AI: {input_text}"
-
-
-# ---------- Protocols ----------
-class Embedder(Protocol):
-    def encode(self, texts: List[str]) -> List[List[float]]: ...
-
-
-class VectorStore(Protocol):
-    def upsert_many(self, rows: List[Tuple[str, int, str, List[float]]]) -> None: ...
-    def search(self, q_vec: List[float], k: int = 5) -> List[Tuple[str, int, str]]: ...
-
-
-# ---------- Embedding backends ----------
-BACKEND = os.getenv("EMBEDDING_BACKEND", "fastembed").lower()
-
-
-class SentenceTfmEmbedder:
-    """
-    Lightweight, backend-agnostic embedder:
-      - fastembed (default): uses the TextEmbedding model locally
-      - ollama: calls /api/embeddings on the Ollama server
-    Always returns List[List[float]].
-    """
-
-    def __init__(self, model_name: str):
-        self.model_name = model_name
-        if BACKEND == "fastembed":
-            from fastembed import TextEmbedding  # small dependency, fast to install
-            self._embedder = TextEmbedding(model_name=model_name)
-            self._mode = "fastembed"
-        elif BACKEND == "ollama":
-            self._mode = "ollama"
-            self._ollama_url = os.getenv("OLLAMA_URL", "http://ollama:11434")
-            self._ollama_model = model_name or os.getenv("EMBED_MODEL", "nomic-embed-text")
-        else:
-            raise ValueError(f"Unknown EMBEDDING_BACKEND={BACKEND}")
-
-    def encode(self, texts: List[str]) -> List[List[float]]:
-        if isinstance(texts, str):
-            texts = [texts]
-
-        if self._mode == "fastembed":
-            # fastembed returns a generator of arrays; cast to list[list[float]]
-            return [list(vec) for vec in self._embedder.embed(texts)]
-
-        # ollama
-        resp = requests.post(
-            f"{self._ollama_url}/api/embeddings",
-            json={"model": self._ollama_model, "input": texts},
-            timeout=60,
+_EMB = None
+_LLM = None
+_SPLITTER = None
+_STORES: Dict[Tuple[str, int, str], Chroma] = {}
+ 
+def get_embeddings(ollama_base_url: str, model: str) -> OllamaEmbeddings:
+    global _EMB
+    if _EMB is None:
+        _EMB = OllamaEmbeddings(base_url=ollama_base_url, model=model)
+    return _EMB
+ 
+def get_llm(ollama_base_url: str, model: str) -> ChatOllama:
+    global _LLM
+    if _LLM is None:
+        _LLM = ChatOllama(base_url=ollama_base_url, model=model, temperature=0.1)
+    return _LLM
+ 
+def get_splitter(chunk_size: int, chunk_overlap: int) -> RecursiveCharacterTextSplitter:
+    global _SPLITTER
+    if _SPLITTER is None:
+        _SPLITTER = RecursiveCharacterTextSplitter(
+            chunk_size=chunk_size, chunk_overlap=chunk_overlap
         )
-        resp.raise_for_status()
-        data = resp.json()
-        # Ollama returns a single "embedding" for str; "embeddings" for list
-        if "embedding" in data:
-            return [data["embedding"]]
-        return [item["embedding"] for item in data.get("embeddings", [])]
-
-
-# ---------- Chroma store ----------
-class ChromaStore:
-    """Works with Chroma v2 server."""
-    def __init__(self, url: str, collection: str):
-        parsed = urlparse(url)
-        host = parsed.hostname or "chroma"
-        port = int(parsed.port or 8000)
-        tenant = os.getenv("CHROMA_TENANT", "default_tenant")
-        database = os.getenv("CHROMA_DATABASE", "default_database")
-        self.client: HttpClient = chromadb.HttpClient(
-            host=host, port=port, tenant=tenant, database=database
+    return _SPLITTER
+ 
+def get_store(
+    collection_name: str,
+    chroma_host: str,
+    chroma_port: int,
+    embeddings: OllamaEmbeddings
+) -> Chroma:
+    key = (chroma_host, chroma_port, collection_name)
+    if key not in _STORES:
+        _STORES[key] = Chroma(
+            collection_name=collection_name,
+            embedding_function=embeddings,
+            host=chroma_host,
+            port=chroma_port,
         )
-        self.col = self.client.get_or_create_collection(name=collection)
+    return _STORES[key]
+ 
+def load_pdf(path: str) -> List[Document]:
+    try:
+        from langchain_community.document_loaders import PyMuPDFLoader 
+        loader = PyMuPDFLoader(path)
+        return loader.load()
+    except Exception:
+        from langchain_community.document_loaders import PyPDFLoader
+        loader = PyPDFLoader(path)
+        return loader.load()
 
-    def upsert_many(self, rows: List[Tuple[str, int, str, List[float]]]) -> None:
-        """
-        rows: list of (path, chunk_id, content, embedding_list)
-        """
-        if not rows:
-            return
-        ids, docs, metas, embs = [], [], [], []
-        for path, chunk_id, content, emb in rows:
-            ids.append(f"{path}:{chunk_id}")
-            docs.append(content)
-            metas.append({"path": path, "chunk_id": chunk_id})
-            embs.append(emb)
-        self.col.add(ids=ids, documents=docs, metadatas=metas, embeddings=embs)
+RAG_PROMPT = ChatPromptTemplate.from_template(
+    """You are a helpful assistant. Use ONLY the provided context to answer the question.
+If the answer cannot be found in the context, say you don't know.
+Cite sources inline as [S1], [S2], ... (numbers map to context items).
+ 
+Question: {question}
+ 
+Context:
+{context}
+ 
+Answer:"""
+)
+ 
+def _format_context(docs: List[Document]) -> str:
+    lines = []
+    for i, d in enumerate(docs, start=1):
+        md = d.metadata or {}
+        src = md.get("source") or md.get("file_path") or md.get("source_id") or "doc"
+        page = md.get("page")
+        heading = f"[S{i}] source={src}" + (f" page={page}" if page is not None else "")
+        lines.append(f"{heading}\n{d.page_content}\n")
+    return "\n".join(lines)
 
-    def search(self, q_vec: List[float], k: int = 5) -> List[Tuple[str, int, str]]:
-        res = self.col.query(query_embeddings=[q_vec], n_results=k)
-        out: List[Tuple[str, int, str]] = []
-        if res and res.get("ids"):
-            n = len(res["ids"][0])
-            for i in range(n):
-                meta = res["metadatas"][0][i]
-                doc = res["documents"][0][i]
-                out.append((meta["path"], meta["chunk_id"], doc))
-        return out
-
-
-# ---------- RAG orchestration ----------
-def chunk_text(text: str, size: int = 800, overlap: int = 120) -> List[str]:
-    chunks, start = [], 0
-    step = max(size - overlap, 1)
-    while start < len(text):
-        chunks.append(text[start : start + size])
-        start += step
-    return chunks
-
-
-class RAGService:
-    def __init__(self, embedder: Embedder, store: VectorStore):
-        self.embedder = embedder
-        self.store = store
-
-    def ingest_repo(self, repo_path: str, exts: List[str]) -> Dict:
-        repo = Path(repo_path)
-        files: List[Path] = []
-        for ext in exts:
-            files += list(repo.rglob(f"*{ext}"))
-
-        chunks: List[str] = []
-        metas: List[Tuple[str, int]] = []
-
-        for fp in files:
-            try:
-                text = Path(fp).read_text(encoding="utf-8", errors="ignore")
-            except Exception:
-                continue
-            for i, ch in enumerate(chunk_text(text)):
-                chunks.append(ch)
-                metas.append((str(fp), i))
-
-        if not chunks:
-            return {"ok": False, "message": "No chunks ingested."}
-
-        embs = self.embedder.encode(chunks)  # List[List[float]]
-        rows = [(metas[i][0], metas[i][1], chunks[i], embs[i]) for i in range(len(chunks))]
-        self.store.upsert_many(rows)
-        return {"ok": True, "files": len(files), "chunks": len(chunks)}
-
-    def retrieve(self, question: str, k: int = 5) -> List[Tuple[str, int, str]]:
-        q_emb = self.embedder.encode([question])[0]
-        return self.store.search(q_emb, k)
-
-    @staticmethod
-    def build_prompt(question: str, contexts: List[str]) -> str:
-        joined = "\n\n".join([f"[{i+1}] {c}" for i, c in enumerate(contexts)])
-        return (
-            "You are a helpful assistant that ONLY uses the provided context.\n"
-            "If the answer cannot be found in the context, say you don't know.\n\n"
-            f"Question: {question}\n\nContext:\n{joined}\n\n"
-            "Answer concisely and include citations like [1], [2]."
-        )
+def ingest_pdf_bytes(
+    file_bytes: bytes,
+    filename: str,
+    collection_name: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    cfg = get_config()
+    if collection_name:
+        cfg["collection_name"] = collection_name
+ 
+    emb = get_embeddings(cfg["ollama_base_url"], cfg["ollama_embed_model"])
+    store = get_store(cfg["collection_name"], cfg["chroma_host"], cfg["chroma_port"], emb)
+    splitter = get_splitter(cfg["chunk_size"], cfg["chunk_overlap"])
+ 
+    # write file and load
+    with tempfile.NamedTemporaryFile(delete=True, suffix=f"_{filename}") as tmp:
+        tmp.write(file_bytes)
+        tmp.flush()
+        raw_docs = load_pdf(tmp.name)
+ 
+    # split & enrich metadata
+    docs = splitter.split_documents(raw_docs)
+    for d in docs:
+        md = d.metadata or {}
+        if "source" not in md:
+            md["source"] = os.path.basename(filename)
+        if metadata:
+            md = {**metadata, **md}
+        d.metadata = md
+ 
+    ids = store.add_documents(docs)
+    return {"collection": cfg["collection_name"], "added": len(ids), "ids": ids}
+ 
+def similarity_search(
+    query: str,
+    k: int = 4,
+    collection_name: Optional[str] = None,
+    metadata_filter: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    cfg = get_config()
+    if collection_name:
+        cfg["collection_name"] = collection_name
+ 
+    emb = get_embeddings(cfg["ollama_base_url"], cfg["ollama_embed_model"])
+    store = get_store(cfg["collection_name"], cfg["chroma_host"], cfg["chroma_port"], emb)
+    docs = store.similarity_search(query, k=k, filter=metadata_filter)
+    return {
+        "collection": cfg["collection_name"],
+        "k": k,
+        "matches": [{"page_content": d.page_content, "metadata": d.metadata} for d in docs],
+    }
+ 
+def similarity_search_by_vector(
+    query: str,
+    k: int = 4,
+    collection_name: Optional[str] = None,
+    metadata_filter: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    cfg = get_config()
+    if collection_name:
+        cfg["collection_name"] = collection_name
+ 
+    emb = get_embeddings(cfg["ollama_base_url"], cfg["ollama_embed_model"])
+    store = get_store(cfg["collection_name"], cfg["chroma_host"], cfg["chroma_port"], emb)
+    qvec = emb.embed_query(query)
+    docs = store.similarity_search_by_vector(qvec, k=k, filter=metadata_filter)
+    return {
+        "collection": cfg["collection_name"],
+        "k": k,
+        "matches": [{"page_content": d.page_content, "metadata": d.metadata} for d in docs],
+    }
+ 
+def delete_ids(
+    ids: List[str],
+    collection_name: Optional[str] = None,
+) -> Dict[str, Any]:
+    cfg = get_config()
+    if collection_name:
+        cfg["collection_name"] = collection_name
+ 
+    emb = get_embeddings(cfg["ollama_base_url"], cfg["ollama_embed_model"])
+    store = get_store(cfg["collection_name"], cfg["chroma_host"], cfg["chroma_port"], emb)
+    store.delete(ids=ids)
+    return {"collection": cfg["collection_name"], "deleted": ids}
+ 
+def ask(
+    question: str,
+    k: int = 4,
+    collection_name: Optional[str] = None,
+    metadata_filter: Optional[Dict[str, Any]] = None,
+    by_vector: bool = False,
+) -> Dict[str, Any]:
+    cfg = get_config()
+    if collection_name:
+        cfg["collection_name"] = collection_name
+ 
+    emb = get_embeddings(cfg["ollama_base_url"], cfg["ollama_embed_model"])
+    llm = get_llm(cfg["ollama_base_url"], cfg["ollama_llm_model"])
+    store = get_store(cfg["collection_name"], cfg["chroma_host"], cfg["chroma_port"], emb)
+ 
+    if by_vector:
+        qvec = emb.embed_query(question)
+        docs = store.similarity_search_by_vector(qvec, k=k, filter=metadata_filter)
+    else:
+        docs = store.similarity_search(question, k=k, filter=metadata_filter)
+ 
+    context = _format_context(docs)
+    chain = RAG_PROMPT | llm | StrOutputParser()
+    answer = chain.invoke({"question": question, "context": context}).strip()
+ 
+    sources = [{"snippet": d.page_content[:500], "metadata": d.metadata} for d in docs]
+    return {"collection": cfg["collection_name"], "k": k, "answer": answer, "sources": sources}

@@ -6,7 +6,13 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { IsNumber, IsString, IsDate, IsBoolean } from 'class-validator';
+import {
+  IsNumber,
+  IsString,
+  IsDate,
+  IsBoolean,
+  IsOptional,
+} from 'class-validator';
 import { Conversation } from './conversation.entity';
 
 @Entity()
@@ -32,8 +38,18 @@ export class Message {
 }
 
 export class CreateMessageDto {
-  @IsString() content?: string;
-  @IsNumber() conversationId?: number;
-  @IsDate() dateCreated?: Date;
-  @IsBoolean() isPrompt: boolean;
+  @IsString()
+  content?: string;
+
+  @IsNumber()
+  @IsOptional()
+  conversationId?: number;
+
+  @IsDate()
+  @IsOptional()
+  dateCreated?: Date;
+
+  @IsBoolean()
+  @IsOptional()
+  isPrompt: boolean;
 }

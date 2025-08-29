@@ -1,6 +1,6 @@
 <template>
   <div class="main-container fill-parent">
-    <div class="settings-card card--flush card--edge">
+    <div class="settings-card settings-card--flush settings-card--edge">
       <table class="settings-table">
         <colgroup>
           <col class="col-name" />
