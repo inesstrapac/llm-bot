@@ -26,35 +26,33 @@ Repository: `llm-bot`
 
 ```mermaid
 flowchart LR
-  subgraph FE[Frontend (Vue 3 + MathJax)]
-    UI[Chat UI]
+  subgraph FE ["Frontend - Vue 3 / MathJax"]
+    UI["Chat UI"]
   end
 
-  subgraph BE[Backend (NestJS)]
-    Auth[Auth (JWT)]
-    Msg[Messages & Conversations]
-    Admin[Admin role (view users)]
+  subgraph BE ["Backend - NestJS"]
+    AUTH["Auth (JWT)"]
+    MSG["Messages & Conversations"]
+    ADMIN["Admin role (view users)"]
   end
 
-  subgraph DB[(PostgreSQL)]
-    U[(users)]
-    C[(conversations)]
-    M[(messages)]
+  subgraph DB ["PostgreSQL"]
+    U[users]
+    C[conversations]
+    M[messages]
   end
 
-  subgraph AI[AI Service (FastAPI)]
-    RAG[Retriever (ChromaDB)]
-    LLM[Ollama / Prompting]
+  subgraph AI ["AI Service - FastAPI"]
+    RETRIEVE["Retriever (ChromaDB)"]
+    LLM["Ollama / Prompting"]
   end
 
-  subgraph VDB[(ChromaDB)]
-  end
+  VDB["ChromaDB"]
 
-  UI -->|HTTPS JSON| BE
+  UI -->|"HTTPS JSON"| BE
   BE <--> DB
-  BE -->|/ask (collection, question)| AI
+  BE -->|/ask| AI
   AI <--> VDB
-  UI -.->|LaTeX via MathJax| UI
 ```
 
 **High-level flow**
