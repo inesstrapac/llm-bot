@@ -2,10 +2,8 @@
 import json
 import os
 from typing import Optional, Dict, Any, List
- 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import JSONResponse
- 
 from .service import *
  
 CHROMA_HOST = os.getenv("CHROMA_HOST", "chroma")
@@ -17,10 +15,6 @@ app = FastAPI(title="Chroma PDF Ingestion & RAG API")
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}
-
-@app.get("/")
-def root():
-    return {"message": "I am a little cat."}
 
 @app.get("/collections")
 def fetch_collections():
