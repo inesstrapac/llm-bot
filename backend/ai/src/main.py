@@ -32,7 +32,6 @@ def fetch_collections():
 
 @app.get("/collections/{collection_name}")
 def fetch_collection_data(collection_name):
-    print(collection_name)
     collection_data = get_collection_data(str(collection_name))
 
     return collection_data

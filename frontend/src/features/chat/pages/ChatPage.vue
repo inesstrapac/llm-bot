@@ -86,7 +86,6 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   if (router.currentRoute.value.name === "chat.new") {
-    console.log("onBeforeUnmount");
     chatStore.startNewConversation();
   }
 });

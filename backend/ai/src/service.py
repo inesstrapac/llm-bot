@@ -41,7 +41,6 @@ chroma_client = Client(Settings(
 
 def create_collection(collection_name):
     collection = chroma_client.get_or_create_collection(name=collection_name)
-    print("new collection",collection.name)
     return {
         "id": collection.id,"name": collection.name
     }
@@ -147,7 +146,6 @@ def ingest_pdf_bytes(
     emb = get_embeddings(cfg["ollama_base_url"], cfg["ollama_embed_model"])
     store = get_store(collection_name, cfg["chroma_host"], cfg["chroma_port"], emb)
     splitter = get_splitter(cfg["chunk_size"], cfg["chunk_overlap"], cfg["add_start_index"])
-    print(filename)
     with tempfile.NamedTemporaryFile(delete=True, suffix=f"_{filename}") as tmp:
         tmp.write(file_bytes)
         tmp.flush()
