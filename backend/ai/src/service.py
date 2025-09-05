@@ -1,6 +1,7 @@
 import os
 import tempfile
 from typing import Dict, List, Optional, Any, Tuple
+import re
  
 from langchain_ollama import OllamaEmbeddings, ChatOllama
 from langchain_chroma import Chroma
@@ -240,6 +241,55 @@ def ask(
     context = _format_context(docs)
     chain = RAG_PROMPT | llm | StrOutputParser()
     answer = chain.invoke({"question": question, "context": context}).strip()
+    answer = normalize_latex(answer)
  
     sources = [{"snippet": d.page_content[:500], "metadata": d.metadata} for d in docs]
     return {"collection": cfg["collection_name"], "k": k, "answer": answer, "sources": sources}
+
+MATH_BLOCK_RE = re.compile(
+    r"(\\\((?:.|\n)*?\\\))"
+    r"|"
+    r"(\\\[(?:.|\n)*?\\\])"
+    r"|"
+    r"(\$\$(?:.|\n)*?\$\$)"
+    r"|"
+    r"(\$(?:.|\n)*?\$)",
+    re.S
+)
+
+CMD_RE = re.compile(r"\\[A-Za-z]+(?:\s*\{[^{}]*\}|[A-Za-z])?")
+
+def _inside_any(span_list, idx):
+    for a, b in span_list:
+        if a <= idx < b:
+            return True
+    return False
+
+def normalize_latex(s: str) -> str:
+    s = re.sub(r"\$\$(.*?)\$\$", r"\\[\1\\]", s, flags=re.S)
+
+    s = re.sub(r"\\\\([A-Za-z])", r"\\\1", s)
+    s = re.sub(r"\\\\([()\[\]])", r"\\\1", s)
+
+    s = re.sub(r"\\boldsymbol\s*\{?\s*([A-Za-z])\s*\}?", r"\\vec{\1}", s)
+    s = re.sub(r"\\mathbf\s*\{?\s*([A-Za-z])\s*\}?", r"\\vec{\1}", s)
+    s = re.sub(r"\\vec\s+([A-Za-z])", r"\\vec{\1}", s)
+
+    spans = [(m.start(), m.end()) for m in MATH_BLOCK_RE.finditer(s)]
+    out, last = [], 0
+    for m in CMD_RE.finditer(s):
+        i = m.start()
+        token = m.group()
+
+        if _inside_any(spans, i):
+            continue
+        if token in (r"\(", r"\)", r"\[", r"\]"):
+            continue
+
+        out.append(s[last:i])
+        out.append(r"\(" + token + r"\)")
+        last = m.end()
+    out.append(s[last:])
+    s = "".join(out)
+
+    return s

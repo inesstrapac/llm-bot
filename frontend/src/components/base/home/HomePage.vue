@@ -11,9 +11,6 @@
           >Users</RouterLink
         >
         <RouterLink to="/settings" class="home-btn">Settings</RouterLink>
-        <RouterLink to="/chat" class="home-btn"
-          >Third option leading to chat right now</RouterLink
-        >
       </div>
     </div>
   </div>

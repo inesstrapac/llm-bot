@@ -4,7 +4,7 @@
   --gutter: 80px;
   --card-radius: 18px;
   --card-bg: white;
-  --gutter-sb: 200px;
+  --gutter-sb: 250px;
   --gutter-sbc: 150px;
 }
 
@@ -63,7 +63,6 @@
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   border-top-right-radius: var(--card-radius);
   border-bottom-right-radius: var(--card-radius);
-  background: #0a1020;
   overflow: hidden;
   transition:
     width 0.25s ease,

@@ -5,7 +5,10 @@
     <div class="app-body">
       <aside
         class="app-aside"
-        :class="{ 'is-collapsed': !uiStore.sidebarOpen, 'is-chat': isChat }"
+        :class="{
+          'is-collapsed': !uiStore.sidebarOpen,
+          'is-chat': isChatRoute,
+        }"
         :aria-hidden="!uiStore.sidebarOpen"
       >
         <SideBar />
@@ -25,6 +28,8 @@ import SideBar from "@/components/common/sidebar/SideBar.vue";
 import { useUiStore } from "@/features/ui/store/ui.store";
 import router from "@/app/router";
 
-const isChat = computed(() => router.currentRoute.value.name === "chat");
+const isChatRoute = computed(() =>
+  ["chat.new", "chat"].includes(router.currentRoute.value.name)
+);
 const uiStore = useUiStore();
 </script>

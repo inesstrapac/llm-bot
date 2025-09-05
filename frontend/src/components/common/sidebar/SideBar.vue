@@ -1,33 +1,39 @@
 <template>
-  <nav class="c-sidebar" aria-label="Primary">
-    <ul
-      v-if="
-        router.currentRoute.value.name !== 'chat.new' &&
-        router.currentRoute.value.name !== 'chat'
-      "
-      class="c-sidebar__list"
-    >
+  <nav
+    class="c-sidebar"
+    :class="{ 'c-sidebar--centered': !isChatRoute }"
+    aria-label="Primary"
+  >
+    <ul v-if="!isChatRoute" class="c-sidebar__list">
       <li>
-        <router-link to="/chat.new" class="c-sidebar__link"
-          >💬 Chat</router-link
+        <router-link
+          :to="{ name: 'chat.new' }"
+          class="c-sidebar__link c-sidebar__link--filled"
         >
+          Chat
+        </router-link>
       </li>
+
       <li v-if="isAdmin">
-        <router-link to="/users" class="c-sidebar__link">👥 Users</router-link>
-      </li>
-      <li>
-        <router-link to="/settings" class="c-sidebar__link"
-          >⚙️ Settings</router-link
+        <router-link
+          to="/users"
+          class="c-sidebar__link c-sidebar__link--filled"
         >
+          Users
+        </router-link>
+      </li>
+
+      <li>
+        <router-link
+          to="/settings"
+          class="c-sidebar__link c-sidebar__link--filled"
+        >
+          Settings
+        </router-link>
       </li>
     </ul>
 
-    <div
-      v-if="
-        router.currentRoute.value.name === 'chat.new' ||
-        router.currentRoute.value.name === 'chat'
-      "
-    >
+    <div v-else>
       <ul class="c-sidebar__list">
         <li>
           <router-link
@@ -61,12 +67,16 @@
 <script setup>
 import { computed, onMounted } from "vue";
 import { useAuthStore } from "@/features/auth/store/auth.store";
-import "./sidebar.css";
 import router from "@/app/router";
 import { useChatStore } from "@/features/chat/store/chat.store";
+import "./sidebar.css";
 
 const auth = useAuthStore();
 const chatStore = useChatStore();
+
 const isAdmin = computed(() => auth.user?.role === "admin");
+const isChatRoute = computed(() =>
+  ["chat.new", "chat"].includes(router.currentRoute.value.name)
+);
 onMounted(() => chatStore.fetchConversations());
 </script>
