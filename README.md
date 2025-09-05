@@ -213,11 +213,33 @@ In Docker, compose provides:
 - `CHROMA_HOST=chroma`
 - `CHROMA_PORT=8000`
 - `OLLAMA_EMBED_MODEL=nomic-embed-text`
-- **`OLLAMA_BASE_URL`**: set this **per machine** to your own Ollama server, for example:
+- `OLLAMA_LLM_MODEL=llama3.1:8b` (default; change to any Ollama chat model you have pulled)
+- **`OLLAMA_BASE_URL`** — set per machine to your own Ollama server, for example:
 
   - `http://host.docker.internal:11434` if Ollama runs on your host (macOS/Windows).
   - `http://<your-LAN-IP>:11434` if Ollama runs on another machine (GPU box) in your network.
-  - **Linux note:** you may need to add `extra_hosts: ["host.docker.internal:host-gateway"]` under the `ai` service in `docker-compose.yml` to use the first option.
+  - Linux note: you may need to add `extra_hosts: ["host.docker.internal:host-gateway"]` under the `ai` service in `docker-compose.yml` to use the first option.
+
+#### Model prerequisites (Ollama)
+
+The AI service talks to an external Ollama server. On the machine running Ollama:
+
+```bash
+# Install and start Ollama (see https://ollama.com)
+# Then pull the required models:
+ollama pull nomic-embed-text
+ollama pull llama3.1:8b    # or another chat model you prefer
+
+# Verify models are available
+ollama list
+```
+
+If you change models, update the compose env (or AI `.env` when running locally):
+
+```env
+OLLAMA_EMBED_MODEL=nomic-embed-text
+OLLAMA_LLM_MODEL=llama3.1:8b
+```
 
 ---
 
@@ -255,7 +277,14 @@ npm install
 npm run dev
 ```
 
-AI/Chroma/Postgres stay in Docker.
+AI/Chroma/Postgres stay in Docker. If you do run the AI service locally instead of Docker, install its dependencies and start it manually:
+
+```bash
+cd backend/ai
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn src.main:app --reload --host 0.0.0.0 --port 5000
+```
 
 ---
 
@@ -312,7 +341,7 @@ export class Message {
   @PrimaryGeneratedColumn() id: number;
   @Column() content: string;
   @Column() collectionName: string;
-  @ManyToOne(() => Conversation, (c) => c.messages, {
+  @ManyToOne(() => Conversation, (conversation) => conversation.messages, {
     onDelete: "CASCADE",
     nullable: false,
   })
