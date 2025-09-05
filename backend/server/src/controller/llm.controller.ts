@@ -10,6 +10,11 @@ export class LlmController {
     return this.llmService.getHello();
   }
 
+  @Get('collections')
+  getCollections() {
+    return this.llmService.getCollections();
+  }
+
   @Post('predict')
   async getPrediction(@Body() body: any) {
     return await this.llmService.getPrediction(body.input);

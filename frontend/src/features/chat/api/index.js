@@ -11,3 +11,7 @@ export const findAllMessagesByConversationId = (conversationId) => {
 export const findAllConversationsForUser = () => {
   return http.get("/conversations").then(({ data }) => data);
 };
+
+export const findAllCollections = () => {
+  return http.get("/llm/collections").then(({ data }) => data);
+};

@@ -18,15 +18,43 @@ def get_config() -> Dict[str, Any]:
         "ollama_base_url": os.getenv("OLLAMA_BASE_URL", "http://192.168.88.224:11434"),
         "ollama_embed_model": os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text"),
         "ollama_llm_model": os.getenv("OLLAMA_LLM_MODEL", "llama3.1:8b"),
-        "chunk_size": int(os.getenv("CHUNK_SIZE", "800")),
-        "chunk_overlap": int(os.getenv("CHUNK_OVERLAP", "100")),
+        "chunk_size": int(os.getenv("CHUNK_SIZE", "900")),
+        "chunk_overlap": int(os.getenv("CHUNK_OVERLAP", "150")),
+        "add_start_index": os.getenv("ADD_START_INDEX", 'true'),
     }
 
 _EMB = None
 _LLM = None
 _SPLITTER = None
 _STORES: Dict[Tuple[str, int, str], Chroma] = {}
- 
+
+from chromadb import Client
+from chromadb.config import Settings
+
+chroma_client = Client(Settings(
+    chroma_api_impl="chromadb.api.fastapi.FastAPI",
+    chroma_server_host=os.getenv("CHROMA_HOST", "chroma"),
+    chroma_server_http_port=int(os.getenv("CHROMA_PORT", "8000")),
+    allow_reset=False,
+))
+
+def create_collection(collection_name):
+    collection = chroma_client.get_or_create_collection(name=collection_name)
+    print("new collection",collection.name)
+    return {
+        "id": collection.id,"name": collection.name
+    }
+
+def get_collections():
+    collections = chroma_client.list_collections()
+    return collections
+
+def get_collection_data(collection_name):
+    collection = chroma_client.get_or_create_collection(name=collection_name)
+    collection_data = collection.get(include=["documents", "metadatas", "uris"])
+
+    return collection_data
+
 def get_embeddings(ollama_base_url: str, model: str) -> OllamaEmbeddings:
     global _EMB
     if _EMB is None:
@@ -39,11 +67,11 @@ def get_llm(ollama_base_url: str, model: str) -> ChatOllama:
         _LLM = ChatOllama(base_url=ollama_base_url, model=model, temperature=0.1)
     return _LLM
  
-def get_splitter(chunk_size: int, chunk_overlap: int) -> RecursiveCharacterTextSplitter:
+def get_splitter(chunk_size: int, chunk_overlap: int, add_start_index: bool) -> RecursiveCharacterTextSplitter:
     global _SPLITTER
     if _SPLITTER is None:
         _SPLITTER = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size, chunk_overlap=chunk_overlap
+            chunk_size=chunk_size, chunk_overlap=chunk_overlap, add_start_index=add_start_index,
         )
     return _SPLITTER
  
@@ -77,14 +105,25 @@ RAG_PROMPT = ChatPromptTemplate.from_template(
     """You are a helpful assistant. Use ONLY the provided context to answer the question.
 If the answer cannot be found in the context, say you don't know.
 Cite sources inline as [S1], [S2], ... (numbers map to context items).
- 
+
+Math formatting rules:
+- Use LaTeX. Do NOT put math in code fences or backticks.
+- Inline math: \\( ... \\)
+- Display math (preferred): \\[ ... \\]
+- Vectors: \\vec{{a}}
+- Dot product: \\cdot
+- Norms: \\lVert ... \\rVert
+- Do not double-escape backslashes (write \\(, not \\\\( ).
+
 Question: {question}
- 
+
 Context:
 {context}
- 
+
 Answer:"""
 )
+
+
  
 def _format_context(docs: List[Document]) -> str:
     lines = []
@@ -103,20 +142,16 @@ def ingest_pdf_bytes(
     metadata: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     cfg = get_config()
-    if collection_name:
-        cfg["collection_name"] = collection_name
  
     emb = get_embeddings(cfg["ollama_base_url"], cfg["ollama_embed_model"])
-    store = get_store(cfg["collection_name"], cfg["chroma_host"], cfg["chroma_port"], emb)
-    splitter = get_splitter(cfg["chunk_size"], cfg["chunk_overlap"])
- 
-    # write file and load
+    store = get_store(collection_name, cfg["chroma_host"], cfg["chroma_port"], emb)
+    splitter = get_splitter(cfg["chunk_size"], cfg["chunk_overlap"], cfg["add_start_index"])
+    print(filename)
     with tempfile.NamedTemporaryFile(delete=True, suffix=f"_{filename}") as tmp:
         tmp.write(file_bytes)
         tmp.flush()
         raw_docs = load_pdf(tmp.name)
- 
-    # split & enrich metadata
+
     docs = splitter.split_documents(raw_docs)
     for d in docs:
         md = d.metadata or {}
@@ -127,7 +162,7 @@ def ingest_pdf_bytes(
         d.metadata = md
  
     ids = store.add_documents(docs)
-    return {"collection": cfg["collection_name"], "added": len(ids), "ids": ids}
+    return {"collection": collection_name, "added": len(ids), "ids": ids}
  
 def similarity_search(
     query: str,

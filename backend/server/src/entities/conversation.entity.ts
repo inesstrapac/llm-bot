@@ -1,4 +1,3 @@
-// src/entities/user.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -27,6 +26,9 @@ export class Conversation {
   user: User;
 
   @Column()
+  collectionName: string;
+
+  @Column()
   dateCreated: Date;
 
   @OneToMany(() => Message, (message) => message.conversation)
@@ -37,4 +39,5 @@ export class CreateConversationDto {
   @IsString() name?: string;
   @IsNumber() userId?: number;
   @IsDate() dateCreated?: Date;
+  @IsString() collectionName: string;
 }

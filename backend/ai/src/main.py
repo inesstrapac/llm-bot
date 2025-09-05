@@ -22,18 +22,31 @@ def healthz():
 def root():
     return {"message": "I am a little cat."}
 
-@app.get("/hello")
-def hello():
-    return {"message": "hello from ai"}
+@app.get("/collections")
+def fetch_collections():
+    collections = get_collections()
 
- 
-@app.get("/health")
-def health():
-    return {
-        "status": "ok",
-        "chroma": f"{CHROMA_HOST}:{CHROMA_PORT}",
-        "ollama": OLLAMA_BASE_URL,
-    }
+    return [
+            {
+                "id": getattr(col, "id", None),
+                "name": getattr(col, "name", None),
+                "metadata": getattr(col, "metadata", None),
+                "documents": getattr(col, "documents", None),
+            }
+            for col in collections
+        ]
+
+@app.get("/collections/{collection_name}")
+def fetch_collection_data(collection_name):
+    print(collection_name)
+    collection_data = get_collection_data(str(collection_name))
+
+    return collection_data
+
+@app.post("/collections")
+def create_collections(body: dict):
+    created_collection = create_collection(body["name"])
+    return created_collection
  
 @app.post("/ingest")
 async def ingest_pdf(
@@ -47,7 +60,6 @@ async def ingest_pdf(
         metadata: Optional[Dict[str, Any]] = json.loads(metadata_json) if metadata_json else None
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="metadata_json must be valid JSON.")
-    print(file)
     content = await file.read()
     res = ingest_pdf_bytes(content, file.filename, collection_name=collection, metadata=metadata)
     return JSONResponse(res)

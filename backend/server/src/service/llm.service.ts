@@ -17,6 +17,13 @@ export class LlmService {
     return result.data;
   }
 
+  async getCollections() {
+    const url = `${this.configService.get<string>('AI_SERVICE_URL')}/collections`;
+    const response$ = this.httpService.get(url);
+    const result = await lastValueFrom(response$);
+    return result.data;
+  }
+
   async getPrediction(inputData: any): Promise<any> {
     const url = `${this.configService.get<string>('AI_SERVICE_URL')}/predict`;
 

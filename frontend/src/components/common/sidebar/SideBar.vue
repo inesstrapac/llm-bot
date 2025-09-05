@@ -48,7 +48,6 @@
         >
           <router-link
             :to="{ name: 'chat', params: { id: conversation.id } }"
-            @click="chatStore.fetchMessages(Number(conversation.id))"
             class="c-sidebar__link"
           >
             {{ conversation.name || `Conversation #${conversation.id}` }}

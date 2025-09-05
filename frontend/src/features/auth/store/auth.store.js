@@ -35,7 +35,7 @@ export const useAuthStore = defineStore("auth", () => {
       if (token) {
         accessToken.value = token;
         localStorage.setItem("access_token", token);
-        user.value = data?.user ?? user.value; // optional
+        user.value = data?.user ?? user.value;
       }
     } catch {
       accessToken.value = null;

@@ -52,18 +52,12 @@
   padding: 0 28px;
   text-decoration: none;
 
-  /* look */
-  border-radius: 9999px; /* pill shape */
-  background: linear-gradient(
-    180deg,
-    #b88a5a 0%,
-    #8b5e3c 100%
-  ); /* caramel → cocoa */
-  color: #fff9f0; /* warm cream text */
+  border-radius: 9999px;
+  background: linear-gradient(180deg, #b88a5a 0%, #8b5e3c 100%);
+  color: #fff9f0;
   font-weight: 700;
   letter-spacing: 0.2px;
 
-  /* details */
   border: 1px solid rgb(150, 119, 70);
   box-shadow:
     0 6px 14px #70512240,
@@ -74,7 +68,6 @@
     filter 0.2s ease;
 }
 
-/* hover/active/focus states */
 .home-btn:hover {
   filter: brightness(1.05);
   box-shadow:
@@ -92,7 +85,6 @@
   outline-offset: 3px;
 }
 
-/* optional: highlight the active route */
 .home-btn.router-link-active {
   background: linear-gradient(180deg, #c9996a 0%, #966740 100%);
 }

@@ -1,4 +1,3 @@
-// src/entities/user.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -23,6 +22,9 @@ export class Message {
   @Column()
   content: string;
 
+  @Column()
+  collectionName: string;
+
   @ManyToOne(() => Conversation, (conversation) => conversation.messages, {
     onDelete: 'CASCADE',
     nullable: false,
@@ -41,6 +43,12 @@ export class CreateMessageDto {
   @IsString()
   content?: string;
 
+  @IsString()
+  collectionName: string;
+
+  @IsBoolean()
+  isPrompt: boolean;
+
   @IsNumber()
   @IsOptional()
   conversationId?: number;
@@ -48,8 +56,4 @@ export class CreateMessageDto {
   @IsDate()
   @IsOptional()
   dateCreated?: Date;
-
-  @IsBoolean()
-  @IsOptional()
-  isPrompt: boolean;
 }

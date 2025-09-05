@@ -59,7 +59,7 @@ import "../../../assets/styles/main.css";
 const userStore = userListStore();
 
 onMounted(() => {
-  userStore.loadUsers(); // <-- fetch ALL users on page load
+  userStore.loadUsers();
 });
 
 onBeforeRouteLeave(() => {

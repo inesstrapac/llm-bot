@@ -30,7 +30,7 @@ async function onSubmit() {
     email: email.value,
     password: password.value,
   });
-  emit("success"); // go back to login (handled by parent) or auto-login if you prefer
+  emit("success");
 }
 </script>
 
