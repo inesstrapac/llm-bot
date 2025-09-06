@@ -109,7 +109,13 @@ Citations:
 - Cite sources inline as [S1], [S2], ... right after the sentence or formula they support.
 - [S#] indices map to the numbered items in Document context. Never invent citations.
 
-Chat history (reference only — do NOT cite or copy it as a source):{chat_history}
+Chat history (reference only — do NOT cite or copy it as a source):
+{chat_history}
+
+Language policy:
+- If the user explicitly requests a specific language (e.g., "answer in Croatian"), answer in that language.
+- Otherwise, answer in the same language as the question.
+- Do not translate LaTeX or math symbols; translate only the surrounding prose.
 
 Math formatting rules:
 - Use LaTeX. Do NOT put math in code fences or backticks.
