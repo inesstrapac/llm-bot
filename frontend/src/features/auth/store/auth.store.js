@@ -81,8 +81,8 @@ export const useAuthStore = defineStore("auth", () => {
   async function signOut() {
     try {
       await logout();
-    } catch {
-      console.log("no finished");
+    } catch (error) {
+      return error;
     }
     accessToken.value = null;
     user.value = null;

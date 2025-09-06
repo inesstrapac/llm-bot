@@ -16,8 +16,8 @@ function extractErrorMessage(err) {
     if (typeof data.message === "string") return data.message;
     try {
       return JSON.stringify(data.message);
-    } finally {
-      console.log("meow");
+    } catch (error) {
+      return error;
     }
   }
 
@@ -70,7 +70,6 @@ http.interceptors.response.use(
 
     const msg = extractErrorMessage(error);
     toast.error(msg);
-    console.log("Me hereeeee");
 
     if (status === 401 && !original._retry) {
       original._retry = true;
