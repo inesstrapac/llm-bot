@@ -1,7 +1,32 @@
 import axios from "axios";
+import { createToastInterface } from "vue-toastification";
+import "vue-toastification/dist/index.css";
+import { toastOptions } from "@/app/toast/toastOptions";
+
+const toast = createToastInterface(toastOptions);
+function extractErrorMessage(err) {
+  const fallback = "";
+
+  if (!err || !err.response) return err?.message || fallback;
+
+  const data = err.response.data;
+
+  if (data && data.message) {
+    if (Array.isArray(data.message)) return data.message.join("\n");
+    if (typeof data.message === "string") return data.message;
+    try {
+      return JSON.stringify(data.message);
+    } finally {
+      console.log("meow");
+    }
+  }
+
+  if (typeof data === "string") return data;
+
+  return err.message || fallback;
+}
 
 const API_URL = "http://localhost:8081";
-
 export const http = axios.create({
   baseURL: API_URL,
   timeout: 20000,
@@ -43,6 +68,10 @@ http.interceptors.response.use(
     const status = error?.response?.status;
     const original = error?.config || {};
 
+    const msg = extractErrorMessage(error);
+    toast.error(msg);
+    console.log("Me hereeeee");
+
     if (status === 401 && !original._retry) {
       original._retry = true;
 
@@ -67,7 +96,6 @@ http.interceptors.response.use(
         localStorage.removeItem("access_token");
         resolveQueue(null);
         if (onLogout) onLogout();
-        return Promise.reject(error);
       } finally {
         isRefreshing = false;
       }

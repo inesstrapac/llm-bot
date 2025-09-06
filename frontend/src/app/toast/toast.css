@@ -1,0 +1,22 @@
+.toast-compact {
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  min-height: unset;
+  max-width: 320px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+.toast-compact__body {
+  margin: 0;
+}
+
+.toast-compact.Vue-Toastification__toast--error {
+  background: #fff1f2;
+  color: #7f1d1d;
+  border: 1px solid #fecdd3;
+}
+
+.Vue-Toastification__progress-bar {
+  height: 2px;
+  opacity: 0.4;
+}

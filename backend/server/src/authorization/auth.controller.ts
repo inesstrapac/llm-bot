@@ -13,7 +13,7 @@ import {
 import { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
-import { LoginDto, UpdateUserDto } from 'src/entities/user.entity';
+import { LoginDto, RegisterDto, UpdateUserDto } from 'src/entities/user.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -21,10 +21,15 @@ export class AuthController {
 
   @Post('login')
   async login(
-    @Body() dto: LoginDto,
+    @Body() data: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.auth.login(dto, res);
+    return this.auth.login(data, res);
+  }
+
+  @Post('register')
+  async register(@Body() data: RegisterDto) {
+    return this.auth.register(data);
   }
 
   @Post('refresh')

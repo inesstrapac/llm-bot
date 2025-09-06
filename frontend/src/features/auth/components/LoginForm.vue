@@ -19,9 +19,11 @@ const email = ref("");
 const password = ref("");
 
 async function onSubmit() {
-  const signedIn = await auth.signIn(email.value, password.value);
-  if (signedIn) {
+  try {
+    await auth.signIn(email.value, password.value);
     emit("success");
+  } catch (error) {
+    return error?.response?.data?.message || "Invalid credentials";
   }
 }
 </script>

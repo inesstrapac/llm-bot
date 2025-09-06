@@ -24,13 +24,17 @@ const email = ref("");
 const password = ref("");
 
 async function onSubmit() {
-  await auth.signUp({
-    name: name.value,
-    surname: surname.value,
-    email: email.value,
-    password: password.value,
-  });
-  emit("success");
+  try {
+    await auth.signUp({
+      name: name.value,
+      surname: surname.value,
+      email: email.value,
+      password: password.value,
+    });
+    emit("success");
+  } catch (error) {
+    return error?.response?.data?.message || "Invalid credentials";
+  }
 }
 </script>
 
