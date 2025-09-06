@@ -40,11 +40,19 @@ export class MessageService {
     }
 
     if (!message.isPrompt) {
+      const conversationMessages = await this.messageRepository.find({
+        where: { conversation: conversation },
+      });
+      const conversationHistory = conversationMessages.map((message) => ({
+        content: message.content,
+        user: message.isPrompt ? 'user' : 'assistant',
+      }));
       const aiUrl = `${this.configService.get<string>('AI_SERVICE_URL')}/ask`;
       const response$ = this.httpService.post(aiUrl, {
         question: message.content,
         collection: message.collectionName,
         k: 4,
+        history: conversationHistory,
       });
       let result = await lastValueFrom(response$);
       message.content = result.data.answer;

@@ -88,6 +88,10 @@ async def askQuestion(payload: Dict[str, Any]):
     collection = payload.get("collection")
     metadata_filter = payload.get("filter")
     by_vector = bool(payload.get("by_vector", False))
+    history = payload.get("history") or []
+
+    if not isinstance(history, list):
+        raise HTTPException(status_code=400, detail="'history' must be a list of messages.")
  
     return ask(
         question=question,
@@ -95,4 +99,5 @@ async def askQuestion(payload: Dict[str, Any]):
         collection_name=collection,
         metadata_filter=metadata_filter,
         by_vector=by_vector,
+        history=history,
     )

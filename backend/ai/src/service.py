@@ -104,7 +104,12 @@ def load_pdf(path: str) -> List[Document]:
 RAG_PROMPT = ChatPromptTemplate.from_template(
     """You are a helpful assistant. Use ONLY the provided context to answer the question.
 If the answer cannot be found in the context, say you don't know.
-Cite sources inline as [S1], [S2], ... (numbers map to context items).
+
+Citations:
+- Cite sources inline as [S1], [S2], ... right after the sentence or formula they support.
+- [S#] indices map to the numbered items in Document context. Never invent citations.
+
+Chat history (reference only — do NOT cite or copy it as a source):{chat_history}
 
 Math formatting rules:
 - Use LaTeX. Do NOT put math in code fences or backticks.
@@ -114,6 +119,8 @@ Math formatting rules:
 - Dot product: \\cdot
 - Norms: \\lVert ... \\rVert
 - Do not double-escape backslashes (write \\(, not \\\\( ).
+
+If sources disagree, mention the discrepancy and cite each claim.
 
 Question: {question}
 
@@ -214,13 +221,23 @@ def delete_ids(
     store = get_store(cfg["collection_name"], cfg["chroma_host"], cfg["chroma_port"], emb)
     store.delete(ids=ids)
     return {"collection": cfg["collection_name"], "deleted": ids}
- 
+
+def _format_chat_history(history: List[Dict[str, str]], limit:int=12) -> str:
+    out = []
+    for m in (history or [])[-limit:]:
+        role = (m.get("role") or "user").upper()
+        content = (m.get("content") or "").strip()
+        if content:
+            out.append(f"{role}: {content}")
+    return "\n".join(out)
+
 def ask(
     question: str,
     k: int = 4,
     collection_name: Optional[str] = None,
     metadata_filter: Optional[Dict[str, Any]] = None,
     by_vector: bool = False,
+    history: Optional[List[Dict[str, str]]] = None,
 ) -> Dict[str, Any]:
     cfg = get_config()
     if collection_name:
@@ -235,10 +252,11 @@ def ask(
         docs = store.similarity_search_by_vector(qvec, k=k, filter=metadata_filter)
     else:
         docs = store.similarity_search(question, k=k, filter=metadata_filter)
- 
+    chat_history_str = _format_chat_history(history or [])
+
     context = _format_context(docs)
     chain = RAG_PROMPT | llm | StrOutputParser()
-    answer = chain.invoke({"question": question, "context": context}).strip()
+    answer = chain.invoke({"question": question, "context": context, "chat_history": chat_history_str}).strip()
     answer = normalize_latex(answer)
  
     sources = [{"snippet": d.page_content[:500], "metadata": d.metadata} for d in docs]
