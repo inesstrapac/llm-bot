@@ -29,7 +29,7 @@ function extractErrorMessage(err) {
 const API_URL = "http://localhost:8081";
 export const http = axios.create({
   baseURL: API_URL,
-  timeout: 20000,
+  timeout: 200000,
   withCredentials: true,
 });
 

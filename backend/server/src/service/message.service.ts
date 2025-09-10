@@ -51,7 +51,7 @@ export class MessageService {
       const response$ = this.httpService.post(aiUrl, {
         question: message.content,
         collection: message.collectionName,
-        k: 4,
+        k: 10,
         history: conversationHistory,
       });
       let result = await lastValueFrom(response$);
