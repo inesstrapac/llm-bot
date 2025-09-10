@@ -422,8 +422,7 @@ uvicorn src.main:app --reload --host 0.0.0.0 --port 5000
   "question": "What is the geometric meaning of d_infty?",
   "k": 4,
   "collection": "<collection_name>",
-  "filter": null,
-  "by_vector": false
+  "filter": null
 }
 ```
 

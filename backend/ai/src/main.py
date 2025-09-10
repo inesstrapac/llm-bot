@@ -6,10 +6,6 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import JSONResponse
 from .service import *
  
-CHROMA_HOST = os.getenv("CHROMA_HOST", "chroma")
-CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8000"))
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://192.168.88.224:11434")
- 
 app = FastAPI(title="Chroma PDF Ingestion & RAG API")
 
 @app.get("/healthz")
@@ -32,9 +28,7 @@ def fetch_collections():
 
 @app.get("/collections/{collection_name}")
 def fetch_collection_data(collection_name):
-    collection_data = get_collection_data(str(collection_name))
-
-    return collection_data
+    return get_collection_data(str(collection_name))
 
 @app.post("/collections")
 def create_collections(body: dict):
@@ -84,10 +78,9 @@ async def askQuestion(payload: Dict[str, Any]):
     question = payload.get("question")
     if not question:
         raise HTTPException(status_code=400, detail="Missing 'question' field.")
-    k = int(payload.get("k", 4))
+    k = int(payload.get("k", 10))
     collection = payload.get("collection")
     metadata_filter = payload.get("filter")
-    by_vector = bool(payload.get("by_vector", False))
     history = payload.get("history") or []
 
     if not isinstance(history, list):
@@ -98,6 +91,5 @@ async def askQuestion(payload: Dict[str, Any]):
         k=k,
         collection_name=collection,
         metadata_filter=metadata_filter,
-        by_vector=by_vector,
         history=history,
     )

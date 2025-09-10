@@ -21,7 +21,7 @@ def get_config() -> Dict[str, Any]:
         "ollama_llm_model": os.getenv("OLLAMA_LLM_MODEL", "llama3.1:8b"),
         "chunk_size": int(os.getenv("CHUNK_SIZE", "900")),
         "chunk_overlap": int(os.getenv("CHUNK_OVERLAP", "150")),
-        "add_start_index": os.getenv("ADD_START_INDEX", 'true'),
+        "add_start_index": os.getenv("ADD_START_INDEX", "true").lower() == "true",
     }
 
 _EMB = None
@@ -102,8 +102,14 @@ def load_pdf(path: str) -> List[Document]:
         return loader.load()
 
 RAG_PROMPT = ChatPromptTemplate.from_template(
-    """You are a helpful assistant. Use ONLY the provided context to answer the question.
-If the answer cannot be found in the context, say you don't know.
+    """You are a helpful math assistant.
+
+Strict language policy:
+- ALWAYS answer in ENGLISH, regardless of the user's language.
+- Do NOT translate or alter LaTeX/math notation; only write English prose around it.
+- Keep all math symbols, variable names, and formulas exactly as in the sources or as standard LaTeX.
+
+Use ONLY the provided context to answer the question. If the answer cannot be found in the context, say you don't know.
 
 Citations:
 - Cite sources inline as [S1], [S2], ... right after the sentence or formula they support.
@@ -111,11 +117,6 @@ Citations:
 
 Chat history (reference only — do NOT cite or copy it as a source):
 {chat_history}
-
-Language policy:
-- If the user explicitly requests a specific language (e.g., "answer in Croatian"), answer in that language.
-- Otherwise, answer in the same language as the question.
-- Do not translate LaTeX or math symbols; translate only the surrounding prose.
 
 Math formatting rules:
 - Use LaTeX. Do NOT put math in code fences or backticks.
@@ -133,9 +134,8 @@ Question: {question}
 Context:
 {context}
 
-Answer:"""
+Answer (in ENGLISH only):"""
 )
-
 
  
 def _format_context(docs: List[Document]) -> str:
@@ -195,26 +195,6 @@ def similarity_search(
         "matches": [{"page_content": d.page_content, "metadata": d.metadata} for d in docs],
     }
  
-def similarity_search_by_vector(
-    query: str,
-    k: int = 4,
-    collection_name: Optional[str] = None,
-    metadata_filter: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
-    cfg = get_config()
-    if collection_name:
-        cfg["collection_name"] = collection_name
- 
-    emb = get_embeddings(cfg["ollama_base_url"], cfg["ollama_embed_model"])
-    store = get_store(cfg["collection_name"], cfg["chroma_host"], cfg["chroma_port"], emb)
-    qvec = emb.embed_query(query)
-    docs = store.similarity_search_by_vector(qvec, k=k, filter=metadata_filter)
-    return {
-        "collection": cfg["collection_name"],
-        "k": k,
-        "matches": [{"page_content": d.page_content, "metadata": d.metadata} for d in docs],
-    }
- 
 def delete_ids(
     ids: List[str],
     collection_name: Optional[str] = None,
@@ -237,12 +217,13 @@ def _format_chat_history(history: List[Dict[str, str]], limit:int=12) -> str:
             out.append(f"{role}: {content}")
     return "\n".join(out)
 
+from .latex_postprocess import enforce_tex
+
 def ask(
     question: str,
     k: int = 4,
     collection_name: Optional[str] = None,
     metadata_filter: Optional[Dict[str, Any]] = None,
-    by_vector: bool = False,
     history: Optional[List[Dict[str, str]]] = None,
 ) -> Dict[str, Any]:
     cfg = get_config()
@@ -253,65 +234,13 @@ def ask(
     llm = get_llm(cfg["ollama_base_url"], cfg["ollama_llm_model"])
     store = get_store(cfg["collection_name"], cfg["chroma_host"], cfg["chroma_port"], emb)
  
-    if by_vector:
-        qvec = emb.embed_query(question)
-        docs = store.similarity_search_by_vector(qvec, k=k, filter=metadata_filter)
-    else:
-        docs = store.similarity_search(question, k=k, filter=metadata_filter)
+    docs = store.similarity_search(question, k=k, filter=metadata_filter)
     chat_history_str = _format_chat_history(history or [])
 
     context = _format_context(docs)
     chain = RAG_PROMPT | llm | StrOutputParser()
     answer = chain.invoke({"question": question, "context": context, "chat_history": chat_history_str}).strip()
-    answer = normalize_latex(answer)
+    answer = enforce_tex(answer)
  
     sources = [{"snippet": d.page_content[:500], "metadata": d.metadata} for d in docs]
     return {"collection": cfg["collection_name"], "k": k, "answer": answer, "sources": sources}
-
-MATH_BLOCK_RE = re.compile(
-    r"(\\\((?:.|\n)*?\\\))"
-    r"|"
-    r"(\\\[(?:.|\n)*?\\\])"
-    r"|"
-    r"(\$\$(?:.|\n)*?\$\$)"
-    r"|"
-    r"(\$(?:.|\n)*?\$)",
-    re.S
-)
-
-CMD_RE = re.compile(r"\\[A-Za-z]+(?:\s*\{[^{}]*\}|[A-Za-z])?")
-
-def _inside_any(span_list, idx):
-    for a, b in span_list:
-        if a <= idx < b:
-            return True
-    return False
-
-def normalize_latex(s: str) -> str:
-    s = re.sub(r"\$\$(.*?)\$\$", r"\\[\1\\]", s, flags=re.S)
-
-    s = re.sub(r"\\\\([A-Za-z])", r"\\\1", s)
-    s = re.sub(r"\\\\([()\[\]])", r"\\\1", s)
-
-    s = re.sub(r"\\boldsymbol\s*\{?\s*([A-Za-z])\s*\}?", r"\\vec{\1}", s)
-    s = re.sub(r"\\mathbf\s*\{?\s*([A-Za-z])\s*\}?", r"\\vec{\1}", s)
-    s = re.sub(r"\\vec\s+([A-Za-z])", r"\\vec{\1}", s)
-
-    spans = [(m.start(), m.end()) for m in MATH_BLOCK_RE.finditer(s)]
-    out, last = [], 0
-    for m in CMD_RE.finditer(s):
-        i = m.start()
-        token = m.group()
-
-        if _inside_any(spans, i):
-            continue
-        if token in (r"\(", r"\)", r"\[", r"\]"):
-            continue
-
-        out.append(s[last:i])
-        out.append(r"\(" + token + r"\)")
-        last = m.end()
-    out.append(s[last:])
-    s = "".join(out)
-
-    return s
