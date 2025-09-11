@@ -36,6 +36,7 @@ export const useChatStore = defineStore("chat", () => {
     } else {
       $resetConversation();
     }
+    scrollToBottom();
   });
 
   watch(
@@ -46,6 +47,7 @@ export const useChatStore = defineStore("chat", () => {
       } else {
         $resetConversation();
       }
+      scrollToBottom();
     }
   );
 
@@ -59,8 +61,10 @@ export const useChatStore = defineStore("chat", () => {
   async function fetchMessages(convoId) {
     setConversationId(convoId);
     messages.value = await findAllMessagesByConversationId(Number(convoId));
-    if (messages.value[0].collectionName != null) {
-      selectedCollectionName.value = messages.value[0].collectionName;
+    if (messages.value.length !== 0) {
+      if (messages.value[0].collectionName != null) {
+        selectedCollectionName.value = messages.value[0].collectionName;
+      }
     }
   }
 
@@ -85,6 +89,14 @@ export const useChatStore = defineStore("chat", () => {
 
   function setInputEl(el) {
     inputEl.value = el;
+  }
+
+  function setScrollEl(el) {
+    scrollEl.value = el;
+  }
+
+  function scrollToBottom() {
+    scrollEl.value.scrollTop = scrollEl.value.scrollHeight;
   }
 
   function autoGrow(e) {
@@ -128,6 +140,7 @@ export const useChatStore = defineStore("chat", () => {
       await fetchConversations();
     }
     await fetchMessages(conversationId.value);
+    scrollToBottom();
     await createMessage({
       content: text,
       isPrompt: false,
@@ -136,6 +149,7 @@ export const useChatStore = defineStore("chat", () => {
     });
     disableInputField.value = false;
     await fetchMessages(conversationId.value);
+    scrollToBottom();
   }
 
   return {
@@ -150,6 +164,7 @@ export const useChatStore = defineStore("chat", () => {
     sortedConversations,
     disableInputField,
     setInputEl,
+    setScrollEl,
     startNewConversation,
     fetchConversations,
     fetchMessages,

@@ -1,7 +1,7 @@
 <template>
   <div class="main-container fill-parent">
     <section class="chat">
-      <div class="chat__scroll" ref="chatStore.scrollEl">
+      <div class="chat__scroll" :ref="chatStore.setScrollEl">
         <ul class="chat__messages">
           <select
             v-model="chatStore.selectedCollectionName"
@@ -71,7 +71,7 @@
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount } from "vue";
+import { onBeforeUnmount } from "vue";
 import { useChatStore } from "@/features/chat/store/chat.store";
 import MathMessage from "../components/MathMessage.vue";
 import "../styles/chat.css";
@@ -80,10 +80,6 @@ import router from "@/app/router";
 
 const chatStore = useChatStore();
 
-onMounted(() => {
-  if (chatStore.scrollEl)
-    chatStore.scrollEl.scrollTop = chatStore.scrollEl.scrollHeight;
-});
 onBeforeUnmount(() => {
   if (router.currentRoute.value.name === "chat.new") {
     chatStore.startNewConversation();
