@@ -33,10 +33,10 @@ export const useChatStore = defineStore("chat", () => {
     const currentConvoId = route.params.id;
     if (currentConvoId) {
       await fetchMessages(currentConvoId);
+      scrollToBottom();
     } else {
       $resetConversation();
     }
-    scrollToBottom();
   });
 
   watch(
