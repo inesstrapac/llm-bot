@@ -1,5 +1,5 @@
 <template>
-  <div class="main-container fill-parent">
+  <div class="main-container main-container--chat fill-parent">
     <section class="chat">
       <div class="chat__scroll" :ref="chatStore.setScrollEl">
         <ul class="chat__messages">

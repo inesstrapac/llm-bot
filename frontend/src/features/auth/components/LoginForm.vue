@@ -1,31 +1,24 @@
 <template>
-  <form @submit.prevent="onSubmit" class="form">
-    <label>Email<input v-model.trim="email" type="text" required /></label>
+  <form @submit.prevent="authStore.onLoginSubmit" class="form">
     <label
-      >Password<input v-model="password" type="password" required minlength="5"
+      >Email<input v-model.trim="authStore.email" type="text" required
     /></label>
-    <button type="submit" :disabled="auth.loading">
-      {{ auth.loading ? "Signing in…" : "Sign in" }}
+    <label
+      >Password<input
+        v-model="authStore.password"
+        type="password"
+        required
+        minlength="5"
+    /></label>
+    <button type="submit" :disabled="authStore.loading">
+      {{ authStore.loading ? "Signing in…" : "Sign in" }}
     </button>
   </form>
 </template>
 
 <script setup>
-import { ref, defineEmits } from "vue";
 import { useAuthStore } from "../store/auth.store";
-const emit = defineEmits(["success"]);
-const auth = useAuthStore();
-const email = ref("");
-const password = ref("");
-
-async function onSubmit() {
-  try {
-    await auth.signIn(email.value, password.value);
-    emit("success");
-  } catch (error) {
-    return error?.response?.data?.message || "Invalid credentials";
-  }
-}
+const authStore = useAuthStore();
 </script>
 
 <style scoped>

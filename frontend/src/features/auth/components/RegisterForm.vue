@@ -1,41 +1,26 @@
 <template>
-  <form @submit.prevent="onSubmit" class="form">
-    <label>Name<input v-model.trim="name" required /></label>
-    <label>Surname<input v-model.trim="surname" required /></label>
-    <label>Email<input v-model.trim="email" type="email" required /></label>
+  <form @submit.prevent="authStore.onSubmit" class="form">
+    <label>Name<input v-model.trim="authStore.name" required /></label>
+    <label>Surname<input v-model.trim="authStore.surname" required /></label>
     <label
-      >Password<input v-model="password" type="password" required minlength="6"
+      >Email<input v-model.trim="authStore.email" type="email" required
     /></label>
-    <button :disabled="auth.loading">
-      {{ auth.loading ? "Creating…" : "Create account" }}
+    <label
+      >Password<input
+        v-model="authStore.password"
+        type="password"
+        required
+        minlength="6"
+    /></label>
+    <button :disabled="authStore.loading">
+      {{ authStore.loading ? "Creating…" : "Create account" }}
     </button>
   </form>
 </template>
 
 <script setup>
-import { ref, defineEmits } from "vue";
 import { useAuthStore } from "../store/auth.store";
-const emit = defineEmits(["success"]);
-const auth = useAuthStore();
-
-const name = ref("");
-const surname = ref("");
-const email = ref("");
-const password = ref("");
-
-async function onSubmit() {
-  try {
-    await auth.signUp({
-      name: name.value,
-      surname: surname.value,
-      email: email.value,
-      password: password.value,
-    });
-    emit("success");
-  } catch (error) {
-    return error?.response?.data?.message || "Invalid credentials";
-  }
-}
+const authStore = useAuthStore();
 </script>
 
 <style scoped>

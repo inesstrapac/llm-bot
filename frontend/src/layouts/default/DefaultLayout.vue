@@ -14,7 +14,7 @@
         <SideBar />
       </aside>
 
-      <main class="app-main">
+      <main class="app-main" :class="{ homepage: isHomepageRoute }">
         <slot />
       </main>
     </div>
@@ -30,6 +30,9 @@ import router from "@/app/router";
 
 const isChatRoute = computed(() =>
   ["chat.new", "chat"].includes(router.currentRoute.value.name)
+);
+const isHomepageRoute = computed(
+  () => router.currentRoute.value.name === "homepage"
 );
 const uiStore = useUiStore();
 </script>

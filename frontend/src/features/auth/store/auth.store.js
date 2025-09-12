@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, defineEmits } from "vue";
 import { login, register, logout, refresh } from "../api";
 import router from "@/app/router";
 
@@ -13,10 +13,48 @@ function decodeJwt(token) {
 }
 
 export const useAuthStore = defineStore("auth", () => {
+  const emit = defineEmits(["success"]);
   const accessToken = ref(localStorage.getItem("access_token"));
   const user = ref(null);
   const loading = ref(false);
   const error = ref(null);
+  const name = ref("");
+  const surname = ref("");
+  const email = ref("");
+  const password = ref("");
+  const tab = ref("login");
+
+  async function setTab(form) {
+    name.value = "";
+    surname.value = "";
+    email.value = "";
+    password.value = "";
+
+    tab.value = form;
+  }
+
+  async function onLoginSubmit() {
+    try {
+      await signIn(email.value, password.value);
+      emit("success");
+    } catch (error) {
+      return error?.response?.data?.message || "Invalid credentials";
+    }
+  }
+
+  async function onSubmit() {
+    try {
+      await signUp({
+        name: name.value,
+        surname: surname.value,
+        email: email.value,
+        password: password.value,
+      });
+      emit("success");
+    } catch (error) {
+      return error?.response?.data?.message || "Invalid credentials";
+    }
+  }
 
   const isExpired = (tok) => {
     const p = decodeJwt(tok);
@@ -92,10 +130,18 @@ export const useAuthStore = defineStore("auth", () => {
 
   return {
     accessToken,
+    name,
+    surname,
+    email,
+    password,
     user,
     loading,
     error,
     isAuthenticated,
+    tab,
+    setTab,
+    onSubmit,
+    onLoginSubmit,
     bootstrap,
     signUp,
     signIn,
