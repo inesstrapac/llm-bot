@@ -11,13 +11,33 @@ MATH_BLOCK_RE = re.compile(
     r"(\$(?:.|\n)*?\$)",
     re.S,
 )
+
+ENV_BLOCK_RE = re.compile(
+    r"\\begin\{(?P<env>align\*?|equation\*?|gather\*?|multline\*?|aligned|split|cases|"
+    r"pmatrix|bmatrix|matrix|vmatrix|Vmatrix|smallmatrix|array)\}"
+    r"(?P<body>(?:.|\n)*?)"
+    r"\\end\{(?P=env)\}",
+    re.S,
+)
+
 CMD_RE = re.compile(r"\\[A-Za-z]+(?:\s*\{[^{}]*\}|[A-Za-z])?")
 
-def _inside_any(span_list, idx):
+def _inside_any(span_list, idx: int) -> bool:
     for a, b in span_list:
         if a <= idx < b:
             return True
     return False
+
+def _line_intersects_spans(spans, start: int, end: int) -> bool:
+    for a, b in spans:
+        if start < b and end > a:
+            return True
+    return False
+
+def _all_math_spans(s: str):
+    spans = [(m.start(), m.end()) for m in MATH_BLOCK_RE.finditer(s)]
+    spans += [(m.start(), m.end()) for m in ENV_BLOCK_RE.finditer(s)]
+    return spans
 
 def normalize_latex_core(s: str) -> str:
     s = re.sub(r"\$\$(.*?)\$\$", r"\\[\1\\]", s, flags=re.S)
@@ -29,17 +49,15 @@ def normalize_latex_core(s: str) -> str:
     s = re.sub(r"\\mathbf\s*\{?\s*([A-Za-z])\s*\}?", r"\\vec{\1}", s)
     s = re.sub(r"\\vec\s+([A-Za-z])", r"\\vec{\1}", s)
 
-    spans = [(m.start(), m.end()) for m in MATH_BLOCK_RE.finditer(s)]
+    spans = _all_math_spans(s)
     out, last = [], 0
     for m in CMD_RE.finditer(s):
         i = m.start()
         token = m.group()
-
         if _inside_any(spans, i):
             continue
         if token in (r"\(", r"\)", r"\[", r"\]"):
             continue
-
         out.append(s[last:i])
         out.append(r"\(" + token + r"\)")
         last = m.end()
@@ -67,10 +85,12 @@ UNICODE_TO_TEX = {
     "−": "-",
 }
 UNICODE_RE = re.compile("|".join(map(re.escape, UNICODE_TO_TEX.keys())))
+
 def unicode_to_latex(text: str) -> str:
     return UNICODE_RE.sub(lambda m: UNICODE_TO_TEX[m.group(0)], text)
 
 SINGLE_DOLLAR_INLINE_RE = re.compile(r"(?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)", re.S)
+
 def convert_single_dollar_inline(s: str) -> str:
     return SINGLE_DOLLAR_INLINE_RE.sub(r"\\(\1\\)", s)
 
@@ -136,6 +156,7 @@ def _fix_ascii_times(block: str) -> str:
 
 PAREN_DIV_RE = re.compile(r"\(\s*([^()]+?)\s*\)\s*/\s*\(\s*([^()]+?)\s*\)")
 BRACK_DIV_RE = re.compile(r"\[\s*([^\[\]]+?)\s*\]\s*/\s*\[\s*([^\[\]]+?)\s*\]")
+
 def _slash_to_frac(block: str) -> str:
     changed = True
     while changed:
@@ -167,23 +188,24 @@ def _fix_inside_math(block: str) -> str:
     return block
 
 def _repair_math_blocks(s: str) -> str:
-    def repl(m: re.Match) -> str:
+    def repl_inline_display(m: re.Match) -> str:
         return _fix_inside_math(m.group(0))
-    return MATH_BLOCK_RE.sub(repl, s)
+    s = MATH_BLOCK_RE.sub(repl_inline_display, s)
+
+    def repl_env(m: re.Match) -> str:
+        env = m.group("env")
+        body = m.group("body")
+        body = re.sub(r"\\\[|\\\]", "", body)
+        body = _fix_inside_math(body)
+        return f"\\begin{{{env}}}{body}\\end{{{env}}}"
+    s = ENV_BLOCK_RE.sub(repl_env, s)
+    return s
 
 CMD_ANY_RE = re.compile(
     r"\\(sum|prod|int|frac|sqrt|binom|det|cdot|times|leq|geq|neq|infty|alpha|beta|gamma|delta|pi|lambda|sigma)\b"
 )
 WORD_RE = re.compile(r"[A-Za-z]{2,}")
 UNICODE_MATH_RE = re.compile(r"[∑∏∫√≤≥≠×·→↦⇔ℝℤℕℚℂ]")
-
-INLINE_ONE_CMD = re.compile(r"\\\(\s*(\\[A-Za-z]+(?:\s*\{[^{}]*\})?)\s*\\\)")
-INLINE_SIMPLE_TOKEN = re.compile(r"\\\(\s*([A-Za-z0-9=+\-*/.,])\s*\\\)")
-
-def _strip_trivial_inline_wrappers(line: str) -> str:
-    line = INLINE_ONE_CMD.sub(lambda m: m.group(1), line)
-    line = INLINE_SIMPLE_TOKEN.sub(lambda m: m.group(1), line)
-    return line
 
 def _is_prose_heavy(line: str) -> bool:
     tmp = re.sub(r"\\[A-Za-z]+(\s*\{[^{}]*\})?", " ", line)
@@ -198,7 +220,7 @@ def _is_formula_like(line: str) -> bool:
 
     if cmd_count >= 2:
         return True
-    if any(tok in line for tok in (r"\sum", r"\prod", r"\int", r"\frac", r"\sqrt")):
+    if any(tok in line for tok in (r"\\sum", r"\\prod", r"\\int", r"\\frac", r"\\sqrt")):
         return True
     if (uni_count >= 1 and has_eq):
         return True
@@ -211,52 +233,92 @@ def _is_formula_like(line: str) -> bool:
     return False
 
 def wrap_mathy_lines(s: str) -> str:
+    spans = _all_math_spans(s)
     out = []
-    for raw_line in s.splitlines():
-        line = raw_line.rstrip("\n")
+    cursor = 0
+    lines = s.splitlines(True)
+    for raw in lines:
+        line = raw.rstrip("\n")
+        start = cursor
+        end = cursor + len(raw)
+        cursor = end
 
-        line = _strip_trivial_inline_wrappers(line)
-
-        mblocks = list(MATH_BLOCK_RE.finditer(line))
-        has_nontrivial = any(len(m.group(0)) > 6 and re.search(r"[{}_^\\=]", m.group(0)) for m in mblocks)
-        if has_nontrivial:
-            out.append(line)
+        if _line_intersects_spans(spans, start, end):
+            out.append(raw)
             continue
 
         if _is_prose_heavy(line) or not line.strip():
-            out.append(line)
+            out.append(raw)
             continue
 
         if _is_formula_like(line):
-            out.append(r"\[" + line.strip() + r"\]")
+            nl = "" if not raw.endswith("\n") else "\n"
+            out.append(r"\[" + line.strip() + r"\]" + nl)
         else:
-            out.append(line)
-    return "\n".join(out)
+            out.append(raw)
+    return "".join(out)
 
 CMD_FULL_RE = re.compile(r"\\([A-Za-z]+)(?:\s*\{[^{}]*\})?")
 INLINE_CMD_WHITELIST = {
     "times", "cdot", "leq", "geq", "neq", "approx", "sim",
     "in", "notin", "subset", "subseteq", "supset", "supseteq",
     "cup", "cap", "to", "leftarrow", "Rightarrow", "Leftrightarrow",
-    "det"
+    "det",
+    "vec", "mathbf", "boldsymbol",
 }
-def inline_wrap_prose_tokens(s: str) -> str:
-    spans = [(m.start(), m.end()) for m in MATH_BLOCK_RE.finditer(s)]
-    def inside(i):
-        for a, b in spans:
-            if a <= i < b:
-                return True
-            return False
 
+def inline_wrap_prose_tokens(s: str) -> str:
+    spans = _all_math_spans(s)
     def repl(m: re.Match) -> str:
         name = m.group(1)
-        if any(a <= m.start() < b for a, b in spans):
+        i = m.start()
+        if _inside_any(spans, i):
             return m.group(0)
         if name in INLINE_CMD_WHITELIST:
             return r"\(" + m.group(0) + r"\)"
         return m.group(0)
-
     return CMD_FULL_RE.sub(repl, s)
+
+DISPLAY_NESTED_RE = re.compile(r"\\\[\s*(\\\[(?:.|\n)*?\\\])\s*\\\]", re.S)
+EMPTY_DISPLAY_RE = re.compile(r"\\\[\s*\\\]", re.S)
+BARE_OPEN_RE  = re.compile(r"(?m)^\s*\\\[\s*$")
+BARE_CLOSE_RE = re.compile(r"(?m)^\s*\\\]\s*$")
+
+def cleanup_displays_and_envs(s: str) -> str:
+    s = EMPTY_DISPLAY_RE.sub("", s)
+    prev = None
+    while prev != s:
+        prev = s
+        s = DISPLAY_NESTED_RE.sub(r"\1", s)
+    s = BARE_OPEN_RE.sub("", s)
+    s = BARE_CLOSE_RE.sub("", s)
+
+    def strip_in_env(m: re.Match) -> str:
+        env = m.group("env")
+        body = m.group("body")
+        body = re.sub(r"\\\[|\\\]", "", body)
+        body = re.sub(r"\n{3,}", "\n\n", body)
+        return f"\\begin{{{env}}}{body}\\end{{{env}}}"
+    s = ENV_BLOCK_RE.sub(strip_in_env, s)
+
+    s = re.sub(r"\n{3,}", "\n\n", s)
+    return s
+
+INDEX_TOKEN_RE = re.compile(r"\b([A-Za-z])\s*([_^])\s*(\{[^{}]+\}|[A-Za-z0-9])")
+
+def wrap_indices_outside_math(s: str) -> str:
+    spans = _all_math_spans(s)
+    out, last = [], 0
+    for m in INDEX_TOKEN_RE.finditer(s):
+        i = m.start()
+        if _inside_any(spans, i):
+            continue
+        out.append(s[last:i])
+        token = m.group(1) + m.group(2) + m.group(3)
+        out.append(r"\(" + token + r"\)")
+        last = m.end()
+    out.append(s[last:])
+    return "".join(out)
 
 def enforce_tex(raw_text: str) -> str:
     txt = unicodedata.normalize("NFC", raw_text)
@@ -267,11 +329,16 @@ def enforce_tex(raw_text: str) -> str:
 
     txt = normalize_latex_core(txt)
 
+    txt = wrap_indices_outside_math(txt)
+
+    txt = cleanup_displays_and_envs(txt)
+
     txt = wrap_mathy_lines(txt)
 
     txt = _repair_math_blocks(txt)
 
+    txt = cleanup_displays_and_envs(txt)
+
     txt = inline_wrap_prose_tokens(txt)
 
-    txt = unicodedata.normalize("NFC", txt)
-    return txt
+    return unicodedata.normalize("NFC", txt)

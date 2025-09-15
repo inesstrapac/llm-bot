@@ -64,7 +64,7 @@ def get_embeddings(ollama_base_url: str, model: str) -> OllamaEmbeddings:
 def get_llm(ollama_base_url: str, model: str) -> ChatOllama:
     global _LLM
     if _LLM is None:
-        _LLM = ChatOllama(base_url=ollama_base_url, model=model, temperature=0.1)
+        _LLM = ChatOllama(base_url=ollama_base_url, model=model, temperature=0.0)
     return _LLM
  
 def get_splitter(chunk_size: int, chunk_overlap: int, add_start_index: bool) -> RecursiveCharacterTextSplitter:

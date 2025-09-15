@@ -78,7 +78,7 @@ async def askQuestion(payload: Dict[str, Any]):
     question = payload.get("question")
     if not question:
         raise HTTPException(status_code=400, detail="Missing 'question' field.")
-    k = int(payload.get("k", 10))
+    k = int(payload.get("k", 4))
     collection = payload.get("collection")
     metadata_filter = payload.get("filter")
     history = payload.get("history") or []
